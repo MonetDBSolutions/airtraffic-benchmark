@@ -175,7 +175,7 @@ def write_makefile(writer, config):
 	print >>f
 
 	print >>f, "ping: ping-$(HOSTNAME)"
-	print >>f, "pings:",
+	print >>f, "ping-all:",
 	for n in config.nodes:
 		print >>f, "ping-%s" % n,
 	print >>f
@@ -186,7 +186,7 @@ def write_makefile(writer, config):
 	print >>f
 
 	print >>f, "download: download-$(HOSTNAME)"
-	print >>f, "downloads:",
+	print >>f, "download-all:",
 	for n in config.nodes:
 		c = config.for_node(n)
 		if not c.partition:
@@ -219,7 +219,7 @@ def write_makefile(writer, config):
 	print >>f
 
 	print >>f, "schema: schema-$(HOSTNAME)"
-	print >>f, "schemas:",
+	print >>f, "schema-all:",
 	for n in config.nodes:
 		print >>f, "schema-%s" % n,
 	print >>f
@@ -230,7 +230,7 @@ def write_makefile(writer, config):
 	print >>f
 
 	print >>f, "drop: drop-$(HOSTNAME)"
-	print >>f, "drops:",
+	print >>f, "drop-all:",
 	for n in config.nodes:
 		print >>f, "drop-%s" % n,
 	print >>f

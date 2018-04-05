@@ -41,7 +41,7 @@ Now on each node you can:
 - run `make ping` to verify connectivity to the current node,
   as identified by the `hostname` command.
 
-- run `make pings` to verify connectivity to all nodes.
+- run `make ping-all` to verify connectivity to all nodes.
 
 - run `make download-NODENAME` to download and decompress the data files for
   the given node.  This benefits from parallellism, so you can run
@@ -50,7 +50,7 @@ Now on each node you can:
 - run `make download` to run the downloads for the current node,
   as identified by the `hostname` command.
 
-- run `make downloads` to run the downloads for all nodes on the current node.
+- run `make download-all` to run the downloads for all nodes on the current node.
   This can be convenient if there is a shared filesystem across all nodes.
 
 - run `make schema-NODENAME` to execute the CREATE statements for a node.
@@ -58,19 +58,22 @@ Now on each node you can:
 - run `make schema` to execute the CREATE statements for the current node
   as identified by the `hostname` command.
 
-- run `make schemas` to execute the CREATE statements for all nodes.
+- run `make schema-all` to execute the CREATE statements for all nodes.
 
 - run `make drop-NODENAME` to drop the schema for the given node.
 
 - run `make drop` to drop the schema for the current node
   as identified by the `hostname` command.
 
-- run `make drops` to drop the schema on all nodes.
+- run `make drop-all` to drop the schema on all nodes.
+
+- run `make insert` to execute the COPY INTO statements
+  that read the downloaded data for the given current node.
 
 - run `make insert-NODENAME` to execute the COPY INTO statements
   that read the downloaded data for the given node.
 
-- run `make inserts` to run the COPY INTO's for all nodes.  Benefits from
+- run `make insert-all` to run the COPY INTO's for all nodes.  Benefits from
   parallellism.
 
 The `make schema` and `make insert` steps are separate because that

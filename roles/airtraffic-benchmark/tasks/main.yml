@@ -76,14 +76,18 @@
     dest: "{{atraf_remote_config_dir}}/"
 
 - name: check connectivity
-  command: make pings
+  command: make ping-all
   args:
     chdir: "{{atraf_remote_config_dir}}"
   changed_when: False
 
 - name: drop existing data
-  command: make drops
+  command: make drop
   when: atraf_force_reload
   args:
     chdir: "{{atraf_remote_config_dir}}"
 
+- name: load schema
+  command: make schema
+  args:
+    chdir: "{{atraf_remote_config_dir}}"
