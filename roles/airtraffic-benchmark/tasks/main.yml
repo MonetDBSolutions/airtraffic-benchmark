@@ -64,7 +64,7 @@
   file:
     path: "{{ atraf_remote_config_dir }}"
     state: directory
-  
+
 - name: create remote .monetdb
   template:
     dest: "{{atraf_remote_config_dir}}/.monetdb"

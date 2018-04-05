@@ -34,10 +34,10 @@ class FileWriter:
 class Config:
 	# Use __slots__ so misspelled attributes give an error
 	__slots__ = [
-		'basedir', 
-		'nodefile', 
-		'subset', 
-		'subsetdir', 
+		'basedir',
+		'nodefile',
+		'subset',
+		'subsetdir',
 		'outputdir',
 		'nodes',
 		'masternode',
@@ -286,20 +286,20 @@ def main(argv0, nodefile=None, subset=None, outputdir=None):
 	partition(config)
 
 	#config.dump()
-
 	writer = FileWriter(config.outputdir)
-
 	write_makefile(writer, config)
 	for node in config.nodes:
 		write_schema(writer, config.for_node(node))
 		write_inserts(writer, config.for_node(node))
-
 	writer.write_all()
+
+	return 0
 
 
 if __name__ == "__main__":
 	try:
-		sys.exit(main(sys.argv[0], *sys.argv[1:]) or 0)
+		status = main(sys.argv[0], *sys.argv[1:])
+		sys.exit(status or 0)
 	except ErrMsg, e:
 		print >>sys.stderr, e.message
 		sys.exit(1)

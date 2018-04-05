@@ -70,16 +70,12 @@ Now on each node you can:
 - run `make insert` to execute the COPY INTO statements
   that read the downloaded data for the given current node.
 
-- run `make insert-NODENAME` to execute the COPY INTO statements
-  that read the downloaded data for the given node.
-
-- run `make insert-all` to run the COPY INTO's for all nodes.  Benefits from
-  parallellism.
-
 The `make schema` and `make insert` steps are separate because that
 turns out to most convenient when trouble shooting.
 
+There is no `make insert-all` because the COPY INTO statement works
+with absolute paths and the nodes do not know where on the other nodes
+the data is stored.
+
 - run `make validate` on the master node to run the queries and
   compare the results with expected results.
-
-- bla
