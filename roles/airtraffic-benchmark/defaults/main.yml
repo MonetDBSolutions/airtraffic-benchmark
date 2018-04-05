@@ -1,0 +1,9 @@
+monetdb_user: monetdb
+monetdb_password: monetdb
+
+monetdb_bin_dir: "{% if monetdb_prefix is defined %}{{ monetdb_prefix }}/bin/{% endif %}"
+
+atraf_config_name: "{{ atraf_subset }}_{{ ansible_play_hosts | length }}x"
+atraf_db: "{{ atraf_config_name }}"
+atraf_config_dir: "{{ atraf_config_name }}"
+

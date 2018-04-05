@@ -1,0 +1,76 @@
+---
+
+- name: determine node names
+  set_fact:
+    atraf_nodes: "{{ ansible_play_hosts }}"
+    # Make sure these don't change anymore.  This also makes them available in hostvars[]
+    # which is necessary when creating the nodefile.
+    monetdb_bin_dir: "{{ monetdb_bin_dir }}"
+    atraf_db: "{{ atraf_db }}"
+    atraf_config_dir: "{{ atraf_config_dir }}"
+
+- name: get database status
+  command: "{{ monetdb_bin_dir }}monetdb status {{ atraf_db }}"
+  register: db_status
+  failed_when: "('stderr' in db_status and db_status.stderr and not 'no such database' in db_status.stderr) or db_status.rc"
+  changed_when: False
+
+- name: "create database {{ atraf_db }}"
+  when: not db_status.stdout
+  command: "{{ monetdb_bin_dir }}monetdb create {{ atraf_db }}"
+  register: db_created
+
+- name: start database
+  when: db_created.changed or not 'R' in db_status.stdout_lines[1].split()[1]
+  command: "{{ monetdb_bin_dir }}monetdb start {{ atraf_db }}"
+
+- name: release database
+  when: db_created.changed or 'L' in db_status.stdout_lines[1].split()[1]
+  command: "{{ monetdb_bin_dir }}monetdb release {{ atraf_db }}"
+
+- name: get database details
+  shell: "{{ monetdb_bin_dir }}monetdb status -l {{ atraf_db }} | sed -n -e 's/  connection uri: //p'"
+  register: mapi_uri_result
+  failed_when: not mapi_uri_result.stdout or mapi_uri_result.rc
+  changed_when: False
+
+- name: figure out mapi uri
+  when: not (mapi_uri is defined)
+  set_fact:
+    mapi_uri: "{{ mapi_uri_result.stdout }}"
+
+- name: create atraf directory locally
+  run_once: yes
+  delegate_to: localhost
+  file:
+    path: "{{ atraf_config_dir }}"
+    state: directory
+
+- name: create nodefile locally
+  run_once: yes
+  delegate_to: localhost
+  template:
+    src: nodefile.j2
+    dest: "{{ atraf_config_dir }}/nodefile"
+
+- name: generate sql and Makefile
+  run_once: yes
+  delegate_to: localhost
+  command: "./generate.py {{atraf_config_dir}}/nodefile {{atraf_subset}} {{atraf_config_dir}}"
+  register: generate_output
+  changed_when: "'Writing ' in generate_output.stdout"
+
+- name: create remote atraf directory
+  file:
+    path: "{{ atraf_dir }}"
+    state: directory
+  
+- name: create remote .monetdb
+  template:
+    dest: "{{ atraf_dir }}/{{atraf_config_dir}}/.monetdb"
+    src: dot.monetdb.j2
+
+- name: copy generated files
+  synchronize:
+    src: "{{atraf_config_dir}}"
+    dest: "{{atraf_dir}}"

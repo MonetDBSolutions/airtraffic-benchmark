@@ -1,0 +1,14 @@
+{# The master node must be the first in the list #}
+{# #}
+{% for node in atraf_nodes %}
+{% if hostvars[node].get('atraf_master', false) %}
+{{ node }}  {{ hostvars[node].mapi_uri }} {{ hostvars[node].get('monetdb_bin_dir') or ''}}
+{% endif %}
+{% endfor %}
+{# Then we list the other nodes #}
+{# #}
+{% for node in atraf_nodes %}
+{% if not hostvars[node].get('atraf_master', false) %}
+{{ node }}  {{ hostvars[node].mapi_uri }} {{ hostvars[node].get('monetdb_bin_dir') or ''}}
+{% endif %}
+{% endfor %}

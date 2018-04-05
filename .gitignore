@@ -1,2 +1,5 @@
+atraf-data/
+*.retry
+
 *.pyc
 .*.swp

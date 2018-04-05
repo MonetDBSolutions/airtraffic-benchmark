@@ -1,6 +1,6 @@
 
 def generate_schema(f, conf):
-    print >>f, "-- DROP SCHEMA IF EXISTS atraf;"
+    print >>f, "DROP SCHEMA IF EXISTS atraf CASCADE;"
     print >>f, "CREATE SCHEMA atraf;"
     print >>f, "SET SCHEMA atraf;"
     print >>f, ""
@@ -230,7 +230,7 @@ def generate_schema(f, conf):
 
     print >>f, "-- Used to check if COPY INTO BEST EFFORT lost any rows"
     print >>f, "CREATE TABLE expected_rows ( \"Year\" INT, \"Month\" INT, \"Rows\" INT );"
-    for host, parts in conf.partitions.items():
+    for _host, parts in conf.partitions.items():
 	if parts:
 	    print >>f, "INSERT INTO expected_rows(\"Year\", \"Month\", \"Rows\") VALUES"
 	    for part in parts:
