@@ -81,13 +81,20 @@
     chdir: "{{atraf_remote_config_dir}}"
   changed_when: False
 
+- name: download the data
+  command: make download-{{inventory_hostname}}
+  args:
+    chdir: "{{atraf_remote_config_dir}}"
+  register: download_output
+  changed_when: "not ('stdout' in download_output and 'make: Nothing to be done for ' in download_output.stdout)"
+
 - name: drop existing data
-  command: make drop
+  command: make drop-{{inventory_hostname}}
   when: atraf_force_reload
   args:
     chdir: "{{atraf_remote_config_dir}}"
 
 - name: load schema
-  command: make schema
+  command: make schema-{{inventory_hostname}}
   args:
     chdir: "{{atraf_remote_config_dir}}"

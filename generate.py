@@ -165,8 +165,8 @@ def write_makefile(writer, config):
 	print >>f, "DATA_DIR = ../atraf-data"
 	print >>f
 	print >>f, "# Will be invoked as $(FETCH) TARGET_FILE SOURCE_URL"
-	print >>f, "# Alternative: curl -o"
-	print >>f, "FETCH = wget -O"
+	print >>f, "# Alternative: curl -s -o"
+	print >>f, "FETCH = wget -q -O"
 	print >>f
 	print >>f, "HOSTNAME := $(shell hostname)"
 	print >>f
@@ -196,6 +196,7 @@ def write_makefile(writer, config):
 	for n in config.nodes:
 		c = config.for_node(n)
 		if not c.partition:
+			print >>f, "download-%(node)s:" % c
 			continue
 		print >>f, "download-%(node)s: \\" % c
 		for p in c.partition:
