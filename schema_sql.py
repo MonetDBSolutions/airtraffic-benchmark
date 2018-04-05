@@ -1,6 +1,6 @@
 
 def generate_schema(f, conf):
-    print >>f, "DROP SCHEMA IF EXISTS atraf CASCADE;"
+    print >>f, "-- DROP SCHEMA IF EXISTS atraf CASCADE;"
     print >>f, "CREATE SCHEMA atraf;"
     print >>f, "SET SCHEMA atraf;"
     print >>f, ""

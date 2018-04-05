@@ -8,3 +8,4 @@ atraf_db: "{{ atraf_config_name }}"
 atraf_local_config_dir: "{{ atraf_config_name }}"
 atraf_remote_config_dir: "{{ atraf_dir }}/{{ atraf_config_name }}"
 
+atraf_force_reload: no

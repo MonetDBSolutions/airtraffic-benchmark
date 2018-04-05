@@ -229,6 +229,17 @@ def write_makefile(writer, config):
 		print >>f, "\t%(binprefix)smclient -d %(url)s schema-%(node)s.sql " % c
 	print >>f
 
+	print >>f, "drop: drop-$(HOSTNAME)"
+	print >>f, "drops:",
+	for n in config.nodes:
+		print >>f, "drop-%s" % n,
+	print >>f
+	for n in config.nodes:
+		c = config.for_node(n)
+		print >>f, "drop-%s:" % n
+		print >>f, "\t%(binprefix)smclient -d %(url)s -s 'DROP SCHEMA IF EXISTS atraf CASCADE' " % c
+	print >>f
+
 
 def write_schema(writer, conf):
 	f = writer.open('schema-%(node)s.sql' % conf)

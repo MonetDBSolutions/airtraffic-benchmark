@@ -58,7 +58,14 @@ Now on each node you can:
 - run `make schema` to execute the CREATE statements for the current node
   as identified by the `hostname` command.
 
-- make `make schemas` to execute the CREATE statements for all nodes.
+- run `make schemas` to execute the CREATE statements for all nodes.
+
+- run `make drop-NODENAME` to drop the schema for the given node.
+
+- run `make drop` to drop the schema for the current node
+  as identified by the `hostname` command.
+
+- run `make drops` to drop the schema on all nodes.
 
 - run `make insert-NODENAME` to execute the COPY INTO statements
   that read the downloaded data for the given node.

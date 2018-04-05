@@ -80,4 +80,10 @@
   args:
     chdir: "{{atraf_remote_config_dir}}"
   changed_when: False
-  
+
+- name: drop existing data
+  command: make drops
+  when: atraf_force_reload
+  args:
+    chdir: "{{atraf_remote_config_dir}}"
+
