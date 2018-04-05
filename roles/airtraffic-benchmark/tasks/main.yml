@@ -98,3 +98,8 @@
   command: make schema-{{inventory_hostname}}
   args:
     chdir: "{{atraf_remote_config_dir}}"
+
+- name: load data
+  command: make insert-{{inventory_hostname}}
+  args:
+    chdir: "{{atraf_remote_config_dir}}"

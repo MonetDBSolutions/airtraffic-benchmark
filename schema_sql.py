@@ -168,34 +168,6 @@ def generate_schema(f, conf):
 				print >>f, "    ON '%s';" % conf.urls[node]
 			print >>f, "ALTER TABLE \"ontime\" ADD TABLE \"ontime_%s\";" % node
 
-	#print >>f, "{% for fragment in partitioning[inventory_hostname] %}"
-	#print >>f, "COPY {{ fragment.lines - 1 }} OFFSET 2 RECORDS INTO \"ontime\""
-	#print >>f, "FROM '{{ atraf_data_dir }}/{{ fragment.file }}'"
-	#print >>f, "USING DELIMITERS ',','\n','\"'"
-	#print >>f, ";"
-	#print >>f, "{% endfor %}"
-	#print >>f, "ALTER TABLE \"ontime\" SET READ ONLY;"
-	#print >>f, "ANALYZE atraf.\"ontime\";"
-
-	#print >>f, "{% else %}"
-
-	#print >>f, "{% for host in partitioning %}"
-	#print >>f, ""
-	#print >>f, "{% if host == inventory_hostname %}"
-	#print >>f, "CREATE TABLE \"ontime_{{ host }}\" ( LIKE \"ontime_template\" );"
-	#print >>f, "{% for fragment in partitioning[host] %}"
-	#print >>f, "COPY {{ fragment.lines - 1 }} OFFSET 2 RECORDS INTO \"ontime_{{ host }}\""
-	#print >>f, "FROM '{{ atraf_data_dir }}/{{ fragment.file }}'"
-	#print >>f, "USING DELIMITERS ',','\n','\"'"
-	#print >>f, ";"
-	#print >>f, "{% endfor %}"
-	#print >>f, "ALTER TABLE \"ontime_{{ host }}\" SET READ ONLY;"
-	#print >>f, "ANALYZE atraf.\"ontime_{{ host }}\";"
-	#print >>f, "{% else %}"
-	#print >>f, "{% endif %}"
-	#print >>f, "{% endfor %}"
-	#print >>f, "{% endif %}"
-
 	print >>f, ""
 
 	print >>f, "CREATE FUNCTION histo (categories TINYINT)"
@@ -247,3 +219,29 @@ def generate_schema(f, conf):
 	print >>f, "FROM"
 	print >>f, "        expected_rows AS e"
 	print >>f, ";"
+
+def generate_inserts(f, conf):
+	print >>f, "SET SCHEMA atraf;"
+	print >>f, ""
+
+	if conf.distributed:
+		table_name = "ontime_%s" % conf.node
+		table_exists = len(conf.partition) > 0
+	else:
+		table_name = "ontime"
+		table_exists = True
+
+	if not table_exists:
+		return
+
+	print >>f, "DELETE FROM \"%s\";" % table_name
+	print >>f
+	
+	for fragment in conf.partition:
+		print >>f, "COPY %d OFFSET 2 RECORDS INTO \"%s\"" % (fragment.lines - 1, table_name)
+		print >>f, "FROM '@DATA_DIR@/%s'" % fragment.file
+		print >>f, "USING DELIMITERS ',','\\n','\"';"
+		print >>f
+
+	print >>f, "ALTER TABLE \"%s\" SET READ ONLY;" % table_name
+	print >>f, "ANALYZE atraf.\"%s\";" % table_name

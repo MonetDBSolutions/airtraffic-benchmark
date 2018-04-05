@@ -241,10 +241,21 @@ def write_makefile(writer, config):
 		print >>f, "\t%(binprefix)smclient -d %(url)s -s 'DROP SCHEMA IF EXISTS atraf CASCADE' " % c
 	print >>f
 
+	print >>f, "insert: insert-$(HOSTNAME)"
+	for n in config.nodes:
+		c = config.for_node(n)
+		print >>f, "insert-%s:" % n
+		print >>f, "\t<insert-%(node)s.sql sed -e 's,@DATA_DIR@,$(abspath $(DATA_DIR)),' | %(binprefix)smclient -d %(url)s" % c
+	print >>f
+
 
 def write_schema(writer, conf):
 	f = writer.open('schema-%(node)s.sql' % conf)
 	schema_sql.generate_schema(f, conf)
+
+def write_inserts(writer, conf):
+	f = writer.open('insert-%(node)s.sql' % conf)
+	schema_sql.generate_inserts(f, conf)
 
 
 def main(argv0, nodefile=None, subset=None, outputdir=None):
@@ -281,6 +292,7 @@ def main(argv0, nodefile=None, subset=None, outputdir=None):
 	write_makefile(writer, config)
 	for node in config.nodes:
 		write_schema(writer, config.for_node(node))
+		write_inserts(writer, config.for_node(node))
 
 	writer.write_all()
 
