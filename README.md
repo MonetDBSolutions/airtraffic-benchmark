@@ -36,12 +36,12 @@ After running the script, copy the outputdir to each of the nodes.
 
 Now on each node you can:
 
-- run `make check-NODENAME` to verify connectivity to a specific node.
+- run `make ping-NODENAME` to verify connectivity to a specific node.
 
-- run `make check` to verify connectivity to the current node,
+- run `make ping` to verify connectivity to the current node,
   as identified by the `hostname` command.
 
-- run `make checks` to verify connectivity to all nodes.
+- run `make pings` to verify connectivity to all nodes.
 
 - run `make download-NODENAME` to download and decompress the data files for
   the given node.  This benefits from parallellism, so you can run

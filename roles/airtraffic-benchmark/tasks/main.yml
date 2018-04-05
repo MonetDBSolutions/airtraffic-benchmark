@@ -7,7 +7,7 @@
     # which is necessary when creating the nodefile.
     monetdb_bin_dir: "{{ monetdb_bin_dir }}"
     atraf_db: "{{ atraf_db }}"
-    atraf_config_dir: "{{ atraf_config_dir }}"
+    atraf_local_config_dir: "{{ atraf_local_config_dir }}"
 
 - name: get database status
   command: "{{ monetdb_bin_dir }}monetdb status {{ atraf_db }}"
@@ -43,7 +43,7 @@
   run_once: yes
   delegate_to: localhost
   file:
-    path: "{{ atraf_config_dir }}"
+    path: "{{ atraf_local_config_dir }}"
     state: directory
 
 - name: create nodefile locally
@@ -51,26 +51,33 @@
   delegate_to: localhost
   template:
     src: nodefile.j2
-    dest: "{{ atraf_config_dir }}/nodefile"
+    dest: "{{ atraf_local_config_dir }}/nodefile"
 
 - name: generate sql and Makefile
   run_once: yes
   delegate_to: localhost
-  command: "./generate.py {{atraf_config_dir}}/nodefile {{atraf_subset}} {{atraf_config_dir}}"
+  command: "./generate.py {{atraf_local_config_dir}}/nodefile {{atraf_subset}} {{atraf_local_config_dir}}"
   register: generate_output
   changed_when: "'Writing ' in generate_output.stdout"
 
 - name: create remote atraf directory
   file:
-    path: "{{ atraf_dir }}"
+    path: "{{ atraf_remote_config_dir }}"
     state: directory
   
 - name: create remote .monetdb
   template:
-    dest: "{{ atraf_dir }}/{{atraf_config_dir}}/.monetdb"
+    dest: "{{atraf_remote_config_dir}}/.monetdb"
     src: dot.monetdb.j2
 
 - name: copy generated files
   synchronize:
-    src: "{{atraf_config_dir}}"
-    dest: "{{atraf_dir}}"
+    src: "{{atraf_local_config_dir}}/"
+    dest: "{{atraf_remote_config_dir}}/"
+
+- name: check connectivity
+  command: make pings
+  args:
+    chdir: "{{atraf_remote_config_dir}}"
+  changed_when: False
+  

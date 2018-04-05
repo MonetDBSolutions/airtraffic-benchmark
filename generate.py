@@ -174,14 +174,14 @@ def write_makefile(writer, config):
 	print >>f, "\t@echo Hello, world"
 	print >>f
 
-	print >>f, "check: check-$(HOSTNAME)"
-	print >>f, "checks:",
+	print >>f, "ping: ping-$(HOSTNAME)"
+	print >>f, "pings:",
 	for n in config.nodes:
-		print >>f, "check-%s" % n,
+		print >>f, "ping-%s" % n,
 	print >>f
 	for n in config.nodes:
 		c = config.for_node(n)
-		print >>f, "check-%(node)s:" % c
+		print >>f, "ping-%(node)s:" % c
 		print >>f, "\t%(binprefix)smclient -d %(url)s -ftab -s 'select id from sys.tables where false'" % c
 	print >>f
 
