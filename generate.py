@@ -21,12 +21,15 @@ class FileWriter:
 		return sio
 
 	def write_all(self):
-		for path, sio in self.files.items():
+		for path, sio in sorted(self.files.items()):
 			p = os.path.join(self.basedir, path)
 			old_contents = open(p).read() if os.path.exists(p) else None
 			new_contents = sio.getvalue()
 			if new_contents != old_contents:
 				print "Writing %s" % path
+				d = os.path.dirname(p)
+				if not os.path.isdir(d):
+					os.makedirs(d)
 				open(p, 'w').write(new_contents)
 			else:
 				print "Not changing %s" % path
@@ -257,6 +260,13 @@ def write_inserts(writer, conf):
 	f = writer.open('insert-%(node)s.sql' % conf)
 	schema_sql.generate_inserts(f, conf)
 
+def write_files_from_dir(writer, fromdir, todir):
+	for name in os.listdir(fromdir):
+		p = os.path.join(fromdir, name)
+		if os.path.isfile(p):
+			contents = open(p).read()
+			f = writer.open(os.path.join(todir, name))
+			f.write(contents)
 
 def main(argv0, nodefile=None, subset=None, outputdir=None):
 	"""Entry point"""
@@ -277,10 +287,6 @@ def main(argv0, nodefile=None, subset=None, outputdir=None):
 	if not os.path.isdir(config.subsetdir):
 		raise ErrMsg("Subset directory %s does not exist" % config.subsetdir)
 
-	for d in [config.outputdir]:
-		if not os.path.isdir(d):
-			os.makedirs(d)
-
 	read_nodefile(config.nodefile, config)
 	read_subset(config)
 	partition(config)
@@ -288,6 +294,8 @@ def main(argv0, nodefile=None, subset=None, outputdir=None):
 	#config.dump()
 	writer = FileWriter(config.outputdir)
 	write_makefile(writer, config)
+	write_files_from_dir(writer, 'sql', 'sql')
+	write_files_from_dir(writer, config.subsetdir, 'answers')
 	for node in config.nodes:
 		write_schema(writer, config.for_node(node))
 		write_inserts(writer, config.for_node(node))

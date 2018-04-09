@@ -79,3 +79,7 @@ the data is stored.
 
 - run `make validate` on the master node to run the queries and
   compare the results with expected results.
+
+The recommended sequence is to run the following steps oneach node:
+`make ping-all`, `make download`,`make schema` and `make insert`.
+Then, on the master node, `make validate`.
