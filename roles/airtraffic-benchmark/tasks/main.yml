@@ -83,12 +83,16 @@
   command: make ping-all
   args:
     chdir: "{{atraf_remote_config_dir}}"
+  environment:
+    MCLIENT_PREFIX: "{%if monetdb_bin_dir %}{{ monetdb_bin_dir }}/{% endif %}"
   changed_when: False
 
 - name: download the data
   command: make download-{{inventory_hostname}}
   args:
     chdir: "{{atraf_remote_config_dir}}"
+  environment:
+    MCLIENT_PREFIX: "{%if monetdb_bin_dir %}{{ monetdb_bin_dir }}/{% endif %}"
   register: download_output
   changed_when: "not ('stdout' in download_output and 'make: Nothing to be done for ' in download_output.stdout)"
 
@@ -99,6 +103,8 @@
   when: atraf_force_reload
   args:
     chdir: "{{atraf_remote_config_dir}}"
+  environment:
+    MCLIENT_PREFIX: "{%if monetdb_bin_dir %}{{ monetdb_bin_dir }}/{% endif %}"
 
 - name: load schema
   tags:
@@ -106,6 +112,8 @@
   command: make schema-{{inventory_hostname}}
   args:
     chdir: "{{atraf_remote_config_dir}}"
+  environment:
+    MCLIENT_PREFIX: "{%if monetdb_bin_dir %}{{ monetdb_bin_dir }}/{% endif %}"
 
 - name: load data
   tags:
@@ -113,3 +121,5 @@
   command: make insert-{{inventory_hostname}}
   args:
     chdir: "{{atraf_remote_config_dir}}"
+  environment:
+    MCLIENT_PREFIX: "{%if monetdb_bin_dir %}{{ monetdb_bin_dir }}/{% endif %}"

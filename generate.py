@@ -174,7 +174,6 @@ def write_makefile(writer, config):
 	print >>f, "# Alternative: curl -s -o"
 	print >>f, "FETCH = wget -q -O"
 	print >>f
-	print >>f, "MCLIENT_PREFIX="
 	print >>f, "NODENAME := $(shell hostname -s)"
 	print >>f, "DB_URL=$(DB_URL_$(NODENAME))"
 	for n in config.nodes:
