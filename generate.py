@@ -21,6 +21,8 @@ class FileWriter:
 		return sio
 
 	def write_all(self):
+		written = 0
+		unchanged = 0
 		for path, sio in sorted(self.files.items()):
 			p = os.path.join(self.basedir, path)
 			old_contents = open(p).read() if os.path.exists(p) else None
@@ -31,8 +33,11 @@ class FileWriter:
 				if not os.path.isdir(d):
 					os.makedirs(d)
 				open(p, 'w').write(new_contents)
+				written += 1
 			else:
-				print "Not changing %s" % path
+				unchanged += 1
+		print "Wrote %d files, left %d unchanged" % (written, unchanged)
+
 
 class Config:
 	# Use __slots__ so misspelled attributes give an error
