@@ -1,5 +1,6 @@
 #!/usr/bin/env python2
 
+import glob
 import os
 import StringIO
 import sys
@@ -46,6 +47,7 @@ class Config:
 		'nodefile',
 		'subset',
 		'subsetdir',
+		'sqldir',
 		'outputdir',
 		'nodes',
 		'masternode',
@@ -53,6 +55,7 @@ class Config:
 		'urls',
 		'parts',
 		'partitions',
+		'queries',
 	]
 
 	def __init__(self):
@@ -60,6 +63,7 @@ class Config:
 		self.nodes = []
 		self.parts = []
 		self.partitions = {}
+		self.queries = {}
 
 	def __getitem__(self, i):
 		return getattr(self, i)
@@ -140,6 +144,13 @@ def read_subset(config):
 		part = Part(input, lines)
 		config.parts.append(part)
 
+def read_queries(config):
+	for p in glob.glob(os.path.join(config.sqldir, '*.sql')):
+		n = os.path.splitext(os.path.basename(p))[0]
+		q = open(p).read()
+		config.queries[n] = q
+
+
 def partition(config):
 	if len(config.nodes) == 1:
 		nodes = config.nodes[:]
@@ -163,14 +174,19 @@ def write_makefile(writer, config):
 	print >>f, "# Alternative: curl -s -o"
 	print >>f, "FETCH = wget -q -O"
 	print >>f
-	print >>f, "HOSTNAME := $(shell hostname)"
 	print >>f, "MCLIENT_PREFIX="
+	print >>f, "NODENAME := $(shell hostname -s)"
+	print >>f, "DB_URL=$(DB_URL_$(NODENAME))"
+	for n in config.nodes:
+		c = config.for_node(n)
+		print >>f, "DB_URL_%(node)s=%(url)s" % c
+
 	print >>f
 	print >>f, "default:"
-	print >>f, "\t@echo Hello, world"
+	print >>f, "\t@echo This is node $(NODENAME) with url $(DB_URL)"
 	print >>f
 
-	print >>f, "ping: ping-$(HOSTNAME)"
+	print >>f, "ping: ping-$(NODENAME)"
 	print >>f, "ping-all:",
 	for n in config.nodes:
 		print >>f, "ping-%s" % n,
@@ -181,7 +197,7 @@ def write_makefile(writer, config):
 		print >>f, "\t$(MCLIENT_PREFIX)mclient -d %(url)s -ftab -s 'select id from sys.tables where false'" % c
 	print >>f
 
-	print >>f, "download: download-$(HOSTNAME)"
+	print >>f, "download: download-$(NODENAME)"
 	print >>f, "download-all:",
 	for n in config.nodes:
 		c = config.for_node(n)
@@ -215,7 +231,7 @@ def write_makefile(writer, config):
 	print >>f, "\ttouch -t 198510260124 $@"
 	print >>f
 
-	print >>f, "schema: schema-$(HOSTNAME)"
+	print >>f, "schema: schema-$(NODENAME)"
 	print >>f, "schema-all:",
 	for n in config.nodes:
 		print >>f, "schema-%s" % n,
@@ -226,7 +242,7 @@ def write_makefile(writer, config):
 		print >>f, "\t$(MCLIENT_PREFIX)mclient -d %(url)s schema-%(node)s.sql " % c
 	print >>f
 
-	print >>f, "drop: drop-$(HOSTNAME)"
+	print >>f, "drop: drop-$(NODENAME)"
 	print >>f, "drop-all:",
 	for n in config.nodes:
 		print >>f, "drop-%s" % n,
@@ -237,12 +253,24 @@ def write_makefile(writer, config):
 		print >>f, "\t$(MCLIENT_PREFIX)mclient -d %(url)s -s 'DROP SCHEMA IF EXISTS atraf CASCADE' " % c
 	print >>f
 
-	print >>f, "insert: insert-$(HOSTNAME)"
+	print >>f, "insert: insert-$(NODENAME)"
 	for n in config.nodes:
 		c = config.for_node(n)
 		print >>f, "insert-%s:" % n
 		print >>f, "\t<insert-%(node)s.sql sed -e 's,@DATA_DIR@,$(abspath $(DATA_DIR)),' | $(MCLIENT_PREFIX)mclient -d %(url)s" % c
 	print >>f
+
+	print >>f, "validate:",
+	for q in sorted(config.queries.keys()):
+		print >>f, "\\\n\t\tvalidate-%s" % q,
+	print >>f
+	print >>f
+	for q in sorted(config.queries.keys()):
+		print >>f, "validate-%s:" % q
+		print >>f, "\tmkdir -p output"
+		print >>f, "\t$(MCLIENT_PREFIX)mclient -f csv -d $(DB_URL) sql/%s.sql >output/%s.csv" % (q, q)
+		print >>f, "\tcmp answers/%s.csv output/%s.csv" % (q, q)
+
 
 
 def write_schema(writer, conf):
@@ -252,6 +280,11 @@ def write_schema(writer, conf):
 def write_inserts(writer, conf):
 	f = writer.open('insert-%(node)s.sql' % conf)
 	schema_sql.generate_inserts(f, conf)
+
+def write_sql(writer, config):
+	for name, query in sorted(config.queries.items()):
+		f = writer.open(os.path.join('sql/%s.sql' % name))
+		f.write(query)
 
 def write_files_from_dir(writer, fromdir, todir):
 	for name in os.listdir(fromdir):
@@ -271,8 +304,9 @@ def main(argv0, nodefile=None, subset=None, outputdir=None):
 
 	config.subset = subset
 	config.basedir = os.path.abspath(os.path.dirname(argv0))
-	config.nodefile = os.path.abspath(os.path.join(config.basedir, nodefile))
+	config.nodefile = os.path.abspath(nodefile)  # not relative to basedir
 	config.subsetdir = os.path.abspath(os.path.join(config.basedir, 'subsets', subset))
+	config.sqldir = os.path.abspath(os.path.join(config.basedir, 'sql'))
 	config.outputdir = os.path.abspath(outputdir)  # not relative to basedir
 
 	if not os.path.isfile(config.nodefile):
@@ -282,12 +316,13 @@ def main(argv0, nodefile=None, subset=None, outputdir=None):
 
 	read_nodefile(config.nodefile, config)
 	read_subset(config)
+	read_queries(config)
 	partition(config)
 
 	#config.dump()
 	writer = FileWriter(config.outputdir)
 	write_makefile(writer, config)
-	write_files_from_dir(writer, 'sql', 'sql')
+	write_sql(writer, config)
 	write_files_from_dir(writer, config.subsetdir, 'answers')
 	for node in config.nodes:
 		write_schema(writer, config.for_node(node))
