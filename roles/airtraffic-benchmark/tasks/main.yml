@@ -1,5 +1,9 @@
 ---
 
+- name: check node names
+  assert:
+    that: inventory_hostname is match('[a-z0-9_]+')
+
 - name: determine node names
   set_fact:
     atraf_nodes: "{{ ansible_play_hosts }}"
