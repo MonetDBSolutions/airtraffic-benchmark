@@ -46,14 +46,12 @@ class Config:
 		'masternode',
 		'distributed',
 		'urls',
-		'binprefixes',
 		'parts',
 		'partitions',
 	]
 
 	def __init__(self):
 		self.urls = {}
-		self.binprefixes = {}
 		self.nodes = []
 		self.parts = []
 		self.partitions = {}
@@ -72,7 +70,6 @@ class NodeConfig(Config):
 	__slots__ = Config.__slots__ + [
 		'node',
 		'url',
-		'binprefix',
 		'partition',
 		'node_suffix',
 	]
@@ -83,7 +80,6 @@ class NodeConfig(Config):
 				setattr(self, a, getattr(config, a))
 		self.node = node
 		self.url = config.urls[node]
-		self.binprefix = config.binprefixes[node]
 		self.partition = config.partitions[node][:]
 		self.node_suffix = "" if not config.distributed else "_%s" % self.node
 
@@ -115,8 +111,8 @@ def read_nodefile(path, config):
 		if not line:
 			continue
 
-		words = line.split() + 3 * [None]
-		[n, u, d] = words[:3]
+		words = line.split() + 2 * [None]
+		[n, u] = words[:2]
 		if not n or not u:
 			raise ErrMsg("Error on line %d of %s" % (lineno, path))
 		if n in config.urls:
@@ -124,15 +120,6 @@ def read_nodefile(path, config):
 
 		config.nodes.append(n)
 		config.urls[n] = u
-		prefix = None
-		if not d:
-			prefix = ''
-		else:
-			if d.endswith(os.path.sep):
-				prefix = d
-			else:
-				prefix = d + os.path.sep
-		config.binprefixes[n] = prefix
 		config.partitions[n] = []
 
 	config.masternode = config.nodes[0]
@@ -172,6 +159,7 @@ def write_makefile(writer, config):
 	print >>f, "FETCH = wget -q -O"
 	print >>f
 	print >>f, "HOSTNAME := $(shell hostname)"
+	print >>f, "MCLIENT_PREFIX="
 	print >>f
 	print >>f, "default:"
 	print >>f, "\t@echo Hello, world"
@@ -185,7 +173,7 @@ def write_makefile(writer, config):
 	for n in config.nodes:
 		c = config.for_node(n)
 		print >>f, "ping-%(node)s:" % c
-		print >>f, "\t%(binprefix)smclient -d %(url)s -ftab -s 'select id from sys.tables where false'" % c
+		print >>f, "\t$(MCLIENT_PREFIX)mclient -d %(url)s -ftab -s 'select id from sys.tables where false'" % c
 	print >>f
 
 	print >>f, "download: download-$(HOSTNAME)"
@@ -230,7 +218,7 @@ def write_makefile(writer, config):
 	for n in config.nodes:
 		c = config.for_node(n)
 		print >>f, "schema-%s:" % n
-		print >>f, "\t%(binprefix)smclient -d %(url)s schema-%(node)s.sql " % c
+		print >>f, "\t$(MCLIENT_PREFIX)mclient -d %(url)s schema-%(node)s.sql " % c
 	print >>f
 
 	print >>f, "drop: drop-$(HOSTNAME)"
@@ -241,14 +229,14 @@ def write_makefile(writer, config):
 	for n in config.nodes:
 		c = config.for_node(n)
 		print >>f, "drop-%s:" % n
-		print >>f, "\t%(binprefix)smclient -d %(url)s -s 'DROP SCHEMA IF EXISTS atraf CASCADE' " % c
+		print >>f, "\t$(MCLIENT_PREFIX)mclient -d %(url)s -s 'DROP SCHEMA IF EXISTS atraf CASCADE' " % c
 	print >>f
 
 	print >>f, "insert: insert-$(HOSTNAME)"
 	for n in config.nodes:
 		c = config.for_node(n)
 		print >>f, "insert-%s:" % n
-		print >>f, "\t<insert-%(node)s.sql sed -e 's,@DATA_DIR@,$(abspath $(DATA_DIR)),' | %(binprefix)smclient -d %(url)s" % c
+		print >>f, "\t<insert-%(node)s.sql sed -e 's,@DATA_DIR@,$(abspath $(DATA_DIR)),' | $(MCLIENT_PREFIX)mclient -d %(url)s" % c
 	print >>f
 
 
