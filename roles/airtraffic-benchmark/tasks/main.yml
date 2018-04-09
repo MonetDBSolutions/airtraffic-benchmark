@@ -93,17 +93,23 @@
   changed_when: "not ('stdout' in download_output and 'make: Nothing to be done for ' in download_output.stdout)"
 
 - name: drop existing data
+  tags:
+  - init
   command: make drop-{{inventory_hostname}}
   when: atraf_force_reload
   args:
     chdir: "{{atraf_remote_config_dir}}"
 
 - name: load schema
+  tags:
+  - init
   command: make schema-{{inventory_hostname}}
   args:
     chdir: "{{atraf_remote_config_dir}}"
 
 - name: load data
+  tags:
+  - init
   command: make insert-{{inventory_hostname}}
   args:
     chdir: "{{atraf_remote_config_dir}}"
