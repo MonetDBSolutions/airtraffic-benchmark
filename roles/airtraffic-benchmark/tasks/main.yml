@@ -88,6 +88,8 @@
   changed_when: False
 
 - name: download the data
+  tags:
+  - download
   command: make download-{{inventory_hostname}}
   args:
     chdir: "{{atraf_remote_config_dir}}"
