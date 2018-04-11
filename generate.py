@@ -259,11 +259,16 @@ def write_makefile(writer, config):
 		print >>f, "\t<insert-%(node)s.sql sed -e 's,@DATA_DIR@,$(abspath $(DATA_DIR)),' | $(MCLIENT_PREFIX)mclient -d %(url)s" % c
 	print >>f
 
-	print >>f, "validate:",
+	print >>f, "validate: validate-rowcount",
 	for q in sorted(config.queries.keys()):
 		print >>f, "\\\n\t\tvalidate-%s" % q,
 	print >>f
+
 	print >>f
+	print >>f, "validate-rowcount:"
+	print >>f, "\tmkdir -p output"
+	print >>f, "\t$(MCLIENT_PREFIX)mclient -f csv -d $(DB_URL) -s 'SELECT \"Year\", \"Month\", COUNT(*) AS \"Rows\" FROM atraf.ontime GROUP BY \"Year\", \"Month\" ORDER BY \"Year\", \"Month\"' >output/rowcount.csv"
+	print >>f, "\tcmp answers/rowcount.csv output/rowcount.csv"
 	for q in sorted(config.queries.keys()):
 		print >>f, "validate-%s:" % q
 		print >>f, "\tmkdir -p output"
