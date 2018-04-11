@@ -15,29 +15,43 @@ class FileWriter:
 	def __init__(self, basedir):
 		self.basedir = basedir
 		self.files = {}
+		self.executable = {}
 	
-	def open(self, path):
+	def open(self, path, executable=False):
 		sio = StringIO.StringIO()
 		self.files[path] = sio
+		self.executable[path] = executable
 		return sio
 
 	def write_all(self):
-		written = 0
-		unchanged = 0
+		written_files = 0
+		unchanged_files = 0
+
 		for path, sio in sorted(self.files.items()):
 			p = os.path.join(self.basedir, path)
 			old_contents = open(p).read() if os.path.exists(p) else None
 			new_contents = sio.getvalue()
+			modified = False # so far
 			if new_contents != old_contents:
 				print "Writing %s" % path
 				d = os.path.dirname(p)
 				if not os.path.isdir(d):
 					os.makedirs(d)
 				open(p, 'w').write(new_contents)
-				written += 1
+				modified |= True
+			old_perms = os.stat(p).st_mode
+			if self.executable[path]:
+				new_perms = old_perms | 0o111
 			else:
-				unchanged += 1
-		print "Wrote %d files, left %d unchanged" % (written, unchanged)
+				new_perms = old_perms & ~0o111
+			if new_perms != old_perms:
+				os.chmod(p, new_perms)
+				modified |= True
+			if modified:
+				written_files += 1
+			else:
+				unchanged_files += 1
+		print "Wrote %d files, left %d unchanged" % (written_files, unchanged_files)
 
 
 class Config:
@@ -298,6 +312,11 @@ def write_files_from_dir(writer, fromdir, todir):
 			f = writer.open(os.path.join(todir, name))
 			f.write(contents)
 
+def write_bench_script(writer, config):
+    script = 'bench.py'
+    content = open(script).read()
+    writer.open(script, True).write(content)
+
 def main(argv0, nodefile=None, subset=None, outputdir=None):
 	"""Entry point"""
 
@@ -328,6 +347,7 @@ def main(argv0, nodefile=None, subset=None, outputdir=None):
 	write_makefile(writer, config)
 	write_sql(writer, config)
 	write_files_from_dir(writer, config.subsetdir, 'answers')
+	write_bench_script(writer, config)
 	for node in config.nodes:
 		write_schema(writer, config.for_node(node))
 		write_inserts(writer, config.for_node(node))
