@@ -78,6 +78,8 @@
   synchronize:
     src: "{{atraf_local_config_dir}}/"
     dest: "{{atraf_remote_config_dir}}/"
+    group: no
+    owner: no
 
 - name: check connectivity
   command: make ping-all
