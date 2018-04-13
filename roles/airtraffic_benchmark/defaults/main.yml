@@ -9,3 +9,6 @@ atraf_local_config_dir: "{{ atraf_config_name }}"
 atraf_remote_config_dir: "{{ atraf_dir }}/{{ atraf_config_name }}"
 
 atraf_force_reload: no
+
+# by default every node but the first has data
+atraf_data: True

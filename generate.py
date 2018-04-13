@@ -64,7 +64,7 @@ class Config:
 		'sqldir',
 		'outputdir',
 		'nodes',
-		'masternode',
+		'datanodes',
 		'distributed',
 		'urls',
 		'parts',
@@ -75,6 +75,7 @@ class Config:
 	def __init__(self):
 		self.urls = {}
 		self.nodes = []
+		self.datanodes = []
 		self.parts = []
 		self.partitions = {}
 		self.queries = {}
@@ -134,19 +135,31 @@ def read_nodefile(path, config):
 		if not line:
 			continue
 
-		words = line.split() + 2 * [None]
-		[n, u] = words[:2]
+		words = line.split() + 3 * [None]
+		[n, u, d] = words[:3]
 		if not n or not u:
 			raise ErrMsg("Error on line %d of %s" % (lineno, path))
 		if n in config.urls:
 			raise ErrMsg("Duplicate node name %s in %s" % (n, path))
-
+		if not d or d == 'data':
+			has_data = True
+		elif d == 'nodata':
+			has_data = False
+		else:
+			raise ErrMsg("Third argument on line %d must be either 'data' or 'nodata'" % lineno)
+			
 		config.nodes.append(n)
 		config.urls[n] = u
 		config.partitions[n] = []
+		if has_data:
+			config.datanodes.append(n)
 
-	config.masternode = config.nodes[0]
 	config.distributed = len(config.nodes) > 1
+
+	if not config.nodes:
+		raise ErrMsg("Nodefile must define at least one node")
+	if not config.datanodes:
+		raise ErrMsg("There must be at least one data node")
 
 def read_subset(config):
 	for line in open(os.path.join(config.subsetdir, 'inputs.txt')):
@@ -157,6 +170,7 @@ def read_subset(config):
 		lines = int(lines)
 		part = Part(input, lines)
 		config.parts.append(part)
+	config.parts = sorted(config.parts, key=lambda p: (p.year, p.month))
 
 def read_queries(config):
 	for p in glob.glob(os.path.join(config.sqldir, '*.sql')):
@@ -166,13 +180,7 @@ def read_queries(config):
 
 
 def partition(config):
-	if len(config.nodes) == 1:
-		nodes = config.nodes[:]
-	else:
-		# leave master alone, use only slaves
-		nodes = config.nodes[1:]
-
-	for part, node in zip(config.parts, len(config.parts) * nodes):
+	for part, node in zip(config.parts, len(config.parts) * config.datanodes):
 		config.partitions[node].append(part)
 
 

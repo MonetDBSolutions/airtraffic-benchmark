@@ -11,7 +11,9 @@
     # which is necessary when creating the nodefile.
     monetdb_bin_dir: "{{ monetdb_bin_dir }}"
     atraf_db: "{{ atraf_db }}"
+    atraf_data: "{{ atraf_data }}"
     atraf_local_config_dir: "{{ atraf_local_config_dir }}"
+    atraf_remote_config_dir: "{{ atraf_remote_config_dir }}"
 
 - name: get database status
   command: "{{ monetdb_bin_dir }}monetdb status {{ atraf_db }}"

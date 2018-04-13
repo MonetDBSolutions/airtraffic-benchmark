@@ -15,12 +15,12 @@ and that a database has been created on each of them.
 
 Then, on your local system or any other convenient location, create
 a nodefile which lists the node names with the corresponding
-mapi url:
+mapi url and whether the node should store any data:
 
 ```
-    node1 mapi:monetdb://node1:50000/atraf
-    node2 mapi:monetdb://node2:50000/atraf
-    node3 mapi:monetdb://node3:50000/atraf
+    node1 mapi:monetdb://node1:50000/atraf nodata
+    node2 mapi:monetdb://node2:50000/atraf data
+    node3 mapi:monetdb://node3:50000/atraf data
 ```
 
 Then run `generate.py NODEFILE SUBSET OUTPUTDIR`.  This will create
