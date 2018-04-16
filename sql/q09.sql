@@ -16,7 +16,7 @@ FROM t1, t1 AS t2
 WHERE t1."Dest" = t2."Origin" AND t1."CRSArrTime" < t2."CRSDepTime"
 GROUP BY t1."Origin", t2."Origin", t2."Dest"
 -- HAVING AVG(t2."ArrDelay") > 60
-ORDER BY "AVGDepDelay" DESC, "AVGArrDelay" DESC, "AVGDepDelay2" DESC, "AVGArrDelay2" DESC
+ORDER BY "AVGDepDelay" DESC, "AVGArrDelay" DESC, "AVGDepDelay2" DESC, "AVGArrDelay2" DESC, "Airport1", "Airport2", "Airport3"
 --LIMIT 30
 ;
 
