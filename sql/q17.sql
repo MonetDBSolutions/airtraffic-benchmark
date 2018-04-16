@@ -7,6 +7,6 @@ SELECT "Dest",
 FROM ontime
 WHERE "ArrDelay" IS NOT NULL
 GROUP BY "Dest"
-ORDER BY "AvgDelay"
+ORDER BY "AvgDelay", "Dest"
 ;
 
