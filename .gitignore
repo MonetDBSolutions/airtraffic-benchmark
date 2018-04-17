@@ -1,4 +1,5 @@
 atraf-data/
+gen
 *.retry
 
 *.pyc

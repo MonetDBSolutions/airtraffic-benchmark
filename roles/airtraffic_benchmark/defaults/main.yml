@@ -5,7 +5,7 @@ monetdb_bin_dir: "{% if monetdb_prefix is defined %}{{ monetdb_prefix }}/bin/{% 
 
 atraf_config_name: "{{ atraf_subset }}_{{ ansible_play_hosts | length }}x"
 atraf_db: "{{ atraf_config_name }}"
-atraf_local_config_dir: "{{ atraf_config_name }}"
+atraf_local_config_dir: "gen/{{ atraf_config_name }}"
 atraf_remote_config_dir: "{{ atraf_dir }}/{{ atraf_config_name }}"
 
 atraf_force_reload: no
