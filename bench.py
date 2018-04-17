@@ -74,7 +74,7 @@ def run(db, queryfile):
     cmd = ['/usr/bin/env', MCLIENT, '-tperformance', '-fraw', '-d', db, queryfile]
     try:
         p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        (out, err) = p.communicate()
+        (_, err) = p.communicate()
     except subprocess.CalledProcessError, e:
         print >>sys.stderr, "Query %s triggered an exception:" % queryfile
         raise e
