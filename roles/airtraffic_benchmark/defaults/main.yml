@@ -10,5 +10,5 @@ atraf_remote_config_dir: "{{ atraf_dir }}/{{ atraf_config_name }}"
 
 atraf_force_reload: no
 
-# by default every node but the first has data
+# Whether this node should contain data.
 atraf_data: True
