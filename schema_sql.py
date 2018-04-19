@@ -203,9 +203,10 @@ def generate_schema(f, conf):
 	print >>f, "-- Used to check if COPY INTO BEST EFFORT lost any rows"
 	print >>f, "CREATE TABLE expected_rows ( \"Year\" INT, \"Month\" INT, \"Rows\" INT );"
 	all_parts = [part for _host, parts in conf.partitions.items() for part in parts]
+	all_parts = sorted(all_parts, key=lambda p: (p.year, p.month))
 	if all_parts:
 		print >>f, "INSERT INTO expected_rows(\"Year\", \"Month\", \"Rows\") VALUES"
-		for part in sorted(all_parts, key=lambda p: (p.year, p.month)):
+		for part in all_parts:
 			end = "," if part != all_parts[-1] else ";"
 			print >>f, "        (%d, %d, %d)%s" % (part.year, part.month, part.lines - 1, end)
 	print >>f, ""
