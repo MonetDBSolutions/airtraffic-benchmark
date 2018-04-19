@@ -173,7 +173,7 @@ def read_subset(config):
 	config.parts = sorted(config.parts, key=lambda p: (p.year, p.month))
 
 def read_queries(config):
-	for p in glob.glob(os.path.join(config.sqldir, '*.sql')):
+	for p in glob.glob(os.path.join(config.sqldir, 'q??.sql')):
 		n = os.path.splitext(os.path.basename(p))[0]
 		q = open(p).read()
 		config.queries[n] = q
