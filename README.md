@@ -96,6 +96,21 @@ Also, `MCLIENT_PREFIX=` can be used to indicate the location of the
 at the top of the Makefile.
 
 
+Compressed data
+---------------
+
+By default, the generated Makefile will download .xz compressed data
+and decompress it using the xz commmand line tool before loading.
+If MonetDB is compiled with lzma support you can add the `--load-compressed`
+flag to `generate.py` to have MonetDB load the .xz files directly.
+This saves disk space but is slower because the Makefile tries to run
+multiple `xz -d` processes in parallel.
+
+If the target system has no lzma support or is very slow you can also
+pass `--compression gz` to load gzip compressed data instead.  This 
+is a larger download but faster to decompress.
+
+
 How to run the benchmark
 ------------------------
 
