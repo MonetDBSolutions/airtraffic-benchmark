@@ -4,6 +4,7 @@ import argparse
 import glob
 import os
 import StringIO
+import re
 import sys
 
 import schema_sql
@@ -71,6 +72,8 @@ class Config:
 		'parts',
 		'partitions',
 		'queries',
+		'compression',
+		'load_compressed',
 	]
 
 	def __init__(self):
@@ -109,11 +112,12 @@ class NodeConfig(Config):
 		self.node_suffix = "" if not config.distributed else "_%s" % self.node
 
 class Part:
-	__slots__ = ['name', 'file', 'lines', 'year', 'month']
+	__slots__ = ['name', 'load_file', 'fetch_file', 'lines', 'year', 'month']
 
-	def __init__(self, filename, lines):
-		self.name = filename[28:-4]
-		self.file = filename
+	def __init__(self, load_file, fetch_file, lines):
+		self.name = re.search(r'_(\d\d\d\d_\d+)', load_file).group(1)
+		self.load_file = load_file
+		self.fetch_file = fetch_file
 		self.lines = lines
 		year, month = self.name.split('_')
 		self.year = int(year)
@@ -123,7 +127,7 @@ class Part:
 		return getattr(self, i)
 
 	def __repr__(self):
-		return "Part(file='%s')" % self.file
+		return "Part(load_file='%s')" % self.load_file
 
 
 
@@ -167,9 +171,11 @@ def read_subset(config):
 		line = line.strip()
 		if not line:
 			continue
-		[input, lines] = line.split()
+		[filename, lines] = line.split()
 		lines = int(lines)
-		part = Part(input, lines)
+		fetch_file = filename + '.' + config.compression
+		load_file = filename if not config.load_compressed else fetch_file
+		part = Part(load_file, fetch_file, lines)
 		config.parts.append(part)
 	config.parts = sorted(config.parts, key=lambda p: (p.year, p.month))
 
@@ -235,14 +241,20 @@ def write_makefile(writer, config):
 		print >>f, "download-%(node)s: \\" % c
 		for p in c.partition:
 			backslash = "\\" if p != c.partition[-1] else ""
-			print >>f, "\t\t$(DATA_DIR)/%s %s" % (p.file, backslash)
+			print >>f, "\t\t$(DATA_DIR)/%s %s" % (p.load_file, backslash)
 	print >>f
 	for p in config.parts:
-		print >>f, "$(DATA_DIR)/%(file)s: $(DATA_DIR)/%(file)s.xz" % p
-		print >>f, "\txz -d <$^ >$@.tmp"
-		print >>f, "\tmv $@.tmp $@"
-		print >>f, "$(DATA_DIR)/%(file)s.xz: $(DATA_DIR)/.dir" % p
-		print >>f, "\t$(FETCH) $@.tmp $(DATA_LOCATION)/%(file)s.xz" % p
+		if p.load_file != p.fetch_file:
+			print >>f, "$(DATA_DIR)/%(load_file)s: $(DATA_DIR)/%(fetch_file)s" % p
+			if p.fetch_file.endswith('.xz'):
+				print >>f, "\txz -d <$^ >$@.tmp"
+			elif p.fetch_file.endswith('gz'):
+				print >>f, "\tgzip -d <$^ >$@.tmp"
+			else:
+				raise ErrMsg("Don't know how to decompress %s" % p.fetch_file)
+			print >>f, "\tmv $@.tmp $@"
+		print >>f, "$(DATA_DIR)/%(fetch_file)s: $(DATA_DIR)/.dir" % p
+		print >>f, "\t$(FETCH) $@.tmp $(DATA_LOCATION)/%(fetch_file)s" % p
 		print >>f, "\tmv $@.tmp $@"
 	print >>f
 
@@ -337,6 +349,8 @@ def main(argv0, args):
 	config.subsetdir = os.path.abspath(os.path.join(config.basedir, 'subsets', args.subset))
 	config.sqldir = os.path.abspath(os.path.join(config.basedir, 'sql'))
 	config.outputdir = os.path.abspath(args.outputdir)  # not relative to basedir
+	config.compression = args.compression
+	config.load_compressed = args.load_compressed
 
 	if not os.path.isfile(config.nodefile):
 		raise ErrMsg("Node file %s does not exist" % config.nodefile)
@@ -362,9 +376,16 @@ def main(argv0, args):
 	return 0
 
 parser = argparse.ArgumentParser(description='Generate airtraffic benchmark files')
-parser.add_argument('nodefile')
-parser.add_argument('subset')
-parser.add_argument('outputdir')
+parser.add_argument('nodefile', help='Node file, see README')
+parser.add_argument('subset', help='data set to use, for example `3mo` or `2yr`')
+parser.add_argument('outputdir', help='where to write the generated files')
+parser.add_argument('--compression', help='use this to download .gz data instead of .xz',
+	choices=('gz', 'xz'),
+	default='xz'
+)
+parser.add_argument('--load-compressed', help='do not decompress downloaded files first',
+	action='store_true'
+)
 
 if __name__ == "__main__":
 	try:

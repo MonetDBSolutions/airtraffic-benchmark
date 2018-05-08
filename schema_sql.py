@@ -240,7 +240,7 @@ def generate_inserts(f, conf):
 	
 	for fragment in conf.partition:
 		print >>f, "COPY %d OFFSET 2 RECORDS INTO \"%s\"" % (fragment.lines - 1, table_name)
-		print >>f, "FROM '@DATA_DIR@/%s'" % fragment.file
+		print >>f, "FROM '@DATA_DIR@/%s'" % fragment.load_file
 		print >>f, "USING DELIMITERS ',','\\n','\"';"
 		print >>f
 
