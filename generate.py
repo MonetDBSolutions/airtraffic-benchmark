@@ -1,5 +1,6 @@
 #!/usr/bin/env python2
 
+import argparse
 import glob
 import os
 import StringIO
@@ -325,20 +326,17 @@ def write_bench_script(writer, config):
     content = open(script).read()
     writer.open(script, True).write(content)
 
-def main(argv0, nodefile=None, subset=None, outputdir=None):
+def main(argv0, args):
 	"""Entry point"""
 
 	config = Config()
 
-	if not nodefile or not subset or not outputdir:
-		raise ErrMsg("Usage: %s NODEFILE SUBSET OUTPUTDIR" % argv0)
-
-	config.subset = subset
+	config.subset = args.subset
 	config.basedir = os.path.abspath(os.path.dirname(argv0))
-	config.nodefile = os.path.abspath(nodefile)  # not relative to basedir
-	config.subsetdir = os.path.abspath(os.path.join(config.basedir, 'subsets', subset))
+	config.nodefile = os.path.abspath(args.nodefile)  # not relative to basedir
+	config.subsetdir = os.path.abspath(os.path.join(config.basedir, 'subsets', args.subset))
 	config.sqldir = os.path.abspath(os.path.join(config.basedir, 'sql'))
-	config.outputdir = os.path.abspath(outputdir)  # not relative to basedir
+	config.outputdir = os.path.abspath(args.outputdir)  # not relative to basedir
 
 	if not os.path.isfile(config.nodefile):
 		raise ErrMsg("Node file %s does not exist" % config.nodefile)
@@ -363,10 +361,15 @@ def main(argv0, nodefile=None, subset=None, outputdir=None):
 
 	return 0
 
+parser = argparse.ArgumentParser(description='Generate airtraffic benchmark files')
+parser.add_argument('nodefile')
+parser.add_argument('subset')
+parser.add_argument('outputdir')
 
 if __name__ == "__main__":
 	try:
-		status = main(sys.argv[0], *sys.argv[1:])
+		args = parser.parse_args()
+		status = main(sys.argv[0], args)
 		sys.exit(status or 0)
 	except ErrMsg, e:
 		print >>sys.stderr, e.message
