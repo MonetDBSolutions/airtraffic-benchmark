@@ -12,3 +12,6 @@ atraf_force_reload: no
 
 # Whether this node should contain data.
 atraf_data: True
+
+atraf_compression: xz
+atraf_load_compressed: False

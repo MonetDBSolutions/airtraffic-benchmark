@@ -62,7 +62,7 @@
 - name: generate sql and Makefile
   run_once: yes
   delegate_to: localhost
-  command: "./generate.py {{atraf_local_config_dir}}/nodefile {{atraf_subset}} {{atraf_local_config_dir}}"
+  command: "./generate.py --compression {{atraf_compression}} {%if atraf_load_compressed%}--load-compressed{%endif%} {{atraf_local_config_dir}}/nodefile {{atraf_subset}} {{atraf_local_config_dir}}"
   register: generate_output
   changed_when: "'Writing ' in generate_output.stdout"
 
