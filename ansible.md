@@ -40,7 +40,7 @@ Mandatory:
 
 Common:
 
-- `atraf_db`.  Name of the database on this node.  Default: `{{atraf_config name}}`.
+- `atraf_db`.  Name of the database on this node.  Default: `{{atraf_config_name}}`.
 
 - `atraf_data`.  Boolean indicating whether a node should hold data.  Often set
   to false on a single node to create a dataless master node.  Default: true.
