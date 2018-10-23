@@ -310,6 +310,21 @@ def write_makefile(writer, config):
 		print >>f, "\t$(MCLIENT_PREFIX)mclient -f csv -d $(DB_URL) sql/%s.sql >output/%s.csv" % (q, q)
 		print >>f, "\tcmp answers/%s.csv output/%s.csv" % (q, q)
 
+	plans = [("%s.plan" % q, "sql/plan_%s.sql" % q, q) for q in sorted(config.queries.keys())]
+	print >>f
+	print >>f, "plan:",
+	for p, _, _ in plans:
+		print >>f, "\\\n\t\t%s" % p,
+	print >>f
+	print >>f
+	for p, e, q in plans:
+		print >>f, "%s: sql/%s.sql" % (e, q)
+		print >>f, "\tsed -e '3s/^/PLAN /' <$< >$@.tmp"
+		print >>f, "\tmv $@.tmp $@"
+	for p, e, q in plans:
+		print >>f, "%s: %s" % (p, e)
+		print >>f, "\t$(MCLIENT_PREFIX)mclient -fraw -d $(DB_URL) $< >$@.tmp"
+		print >>f, "\tsed -e '/^%/d' <$@.tmp >$@"
 
 
 def write_schema(writer, conf):
