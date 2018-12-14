@@ -8,10 +8,12 @@ WITH t1 AS (
       AND "Month" = 3 AND "DayofMonth" = 24 AND "Year" = 2013
 )
 SELECT t1."Origin" AS "Airport1",
-       CAST(AVG(t1."DepDelay") AS DECIMAL(8,2)) AS "AVGDepDelay",
-       CAST(AVG(t1."ArrDelay") AS DECIMAL(8,2)) AS "AVGArrDelay", t2."Origin" AS "Airport2",
-       CAST(AVG(t2."DepDelay") AS DECIMAL(8,2)) AS "AVGDepDelay2",
-       CAST(AVG(t2."ArrDelay") AS DECIMAL(8,2)) AS "AVGArrDelay2", t2."Dest" AS "Airport3"
+       CAST(ROUND( SUM(100 * t1."DepDelay") / COUNT(t1."DepDelay") / 100, 2) AS DECIMAL(8,2)) AS "AVGDepDelay",
+       CAST(ROUND( SUM(100 * t1."ArrDelay") / COUNT(t1."ArrDelay") / 100, 2) AS DECIMAL(8,2)) AS "AVGArrDelay",
+       t2."Origin" AS "Airport2",
+       CAST(ROUND( SUM(100 * t2."DepDelay") / COUNT(t2."DepDelay") / 100, 2) AS DECIMAL(8,2)) AS "AVGDepDelay2",
+       CAST(ROUND( SUM(100 * t2."ArrDelay") / COUNT(t2."ArrDelay") / 100, 2) AS DECIMAL(8,2)) AS "AVGArrDelay2",
+       t2."Dest" AS "Airport3"
 FROM t1, t1 AS t2
 WHERE t1."Dest" = t2."Origin" AND t1."CRSArrTime" < t2."CRSDepTime"
 GROUP BY t1."Origin", t2."Origin", t2."Dest"
