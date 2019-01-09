@@ -138,7 +138,7 @@ def generate_schema(f, conf):
 			else:
 				print >>f, "CREATE REMOTE TABLE \"tmp_%s\" (LIKE tmp_template)" % node,
 				print >>f, "ON '%s';" % conf.urls[node]
-				print >>f, "ALTER TABLE tmp ADD TABLE \"tmp_%s\";" % node
+			print >>f, "ALTER TABLE tmp ADD TABLE \"tmp_%s\";" % node
 		print >>f, ""
 
 	print >>f, "INSERT INTO \"%s\" (\"Hour\")" % tmp_name
