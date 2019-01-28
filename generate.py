@@ -321,10 +321,24 @@ def write_makefile(writer, config):
 		print >>f, "%s: sql/%s.sql" % (e, q)
 		print >>f, "\tsed -e '3s/^/PLAN /' <$< >$@.tmp"
 		print >>f, "\tmv $@.tmp $@"
-	for p, e, q in plans:
+
+	explains = [("%s.explain" % q, "sql/explain_%s.sql" % q, q) for q in sorted(config.queries.keys())]
+	print >>f
+	print >>f, "explain:",
+	for p, _, _ in explains:
+		print >>f, "\\\n\t\t%s" % p,
+	print >>f
+	print >>f
+	for p, e, q in explains:
+		print >>f, "%s: sql/%s.sql" % (e, q)
+		print >>f, "\tsed -e '3s/^/EXPLAIN /' <$< >$@.tmp"
+		print >>f, "\tmv $@.tmp $@"
+
+	for p, e, q in plans + explains:
 		print >>f, "%s: %s" % (p, e)
 		print >>f, "\t$(MCLIENT_PREFIX)mclient -fraw -d $(DB_URL) $< >$@.tmp"
 		print >>f, "\tsed -e '/^%/d' <$@.tmp >$@"
+		print >>f, "\trm $@.tmp"
 
 
 def write_schema(writer, conf):
