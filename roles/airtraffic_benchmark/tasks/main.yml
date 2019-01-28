@@ -64,7 +64,7 @@
   delegate_to: localhost
   command: "./generate.py --compression {{atraf_compression}} {%if atraf_load_compressed%}--load-compressed{%endif%} {{atraf_local_config_dir}}/nodefile {{atraf_subset}} {{atraf_local_config_dir}}"
   register: generate_output
-  changed_when: "'Writing ' in generate_output.stdout"
+  changed_when: "'stdout' in generate_output and 'Writing ' in generate_output.stdout"
 
 - name: create remote atraf directory
   file:
