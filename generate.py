@@ -56,7 +56,7 @@ class FileWriter:
 		print "Wrote %d files, left %d unchanged" % (written_files, unchanged_files)
 
 
-class Config:
+class Config(object):
 	# Use __slots__ so misspelled attributes give an error
 	__slots__ = [
 		'basedir',
@@ -74,6 +74,7 @@ class Config:
 		'queries',
 		'compression',
 		'load_compressed',
+                'data_location',
 	]
 
 	def __init__(self):
@@ -196,12 +197,15 @@ def write_makefile(writer, config):
 
 	print >>f, "# Generated file, do not edit"
 	print >>f
-	print >>f, "DATA_LOCATION = https://s3.eu-central-1.amazonaws.com/atraf/atraf-data"
+	print >>f, "DATA_LOCATION = %(data_location)s" % config
 	print >>f, "DATA_DIR = ../atraf-data"
 	print >>f
 	print >>f, "# Will be invoked as $(FETCH) TARGET_FILE SOURCE_URL"
 	print >>f, "# Alternative: curl -s -o"
-	print >>f, "FETCH = wget -q -O"
+	if config.data_location.startswith('rsync'):
+	        print >>f, 'FETCH = swapargs() { X="$$1"; shift; Y="$$1"; shift; rsync "$$Y" "$$X" "$$@"; }; swapargs'
+        else:
+                print >>f, "FETCH = wget -q -O"
 	print >>f
 	print >>f, "NODENAME := $(shell hostname -s)"
 	print >>f, "DB_URL=$(DB_URL_$(NODENAME))"
@@ -380,6 +384,7 @@ def main(argv0, args):
 	config.outputdir = os.path.abspath(args.outputdir)  # not relative to basedir
 	config.compression = args.compression
 	config.load_compressed = args.load_compressed
+        config.data_location = args.data_location
 
 	if not os.path.isfile(config.nodefile):
 		raise ErrMsg("Node file %s does not exist" % config.nodefile)
@@ -414,6 +419,9 @@ parser.add_argument('--compression', help='use this to download .gz data instead
 )
 parser.add_argument('--load-compressed', help='do not decompress downloaded files first',
 	action='store_true'
+)
+parser.add_argument('--data-location', help='http- or rsync location of the data files',
+        default='https://s3.eu-central-1.amazonaws.com/atraf/atraf-data'
 )
 
 if __name__ == "__main__":

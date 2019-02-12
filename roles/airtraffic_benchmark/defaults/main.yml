@@ -15,3 +15,4 @@ atraf_data: True
 
 atraf_compression: xz
 atraf_load_compressed: False
+atraf_data_location:

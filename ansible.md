@@ -64,6 +64,8 @@ Also:
 
 - `monetdb_password`.  Used in `.monetdb`.  Default: monetdb.
 
+- `atraf_data_location`. Override the download URL for the data files.
+  Useful for setting up a local mirror.
 
 Example
 -------

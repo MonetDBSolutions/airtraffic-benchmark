@@ -110,6 +110,12 @@ If the target system has no lzma support or is very slow you can also
 pass `--compression gz` to load gzip compressed data instead.  This 
 is a larger download but faster to decompress.
 
+Download location
+-----------------
+
+You can override the location of the data files using the `--data-location=`
+flag. This makes it possible to set up a local mirror which distributes the
+files over your nodes. Both http- and rsync-based locations are supported.
 
 How to run the benchmark
 ------------------------
