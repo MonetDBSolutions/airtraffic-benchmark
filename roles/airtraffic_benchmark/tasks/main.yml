@@ -94,7 +94,7 @@
 - name: download the data
   tags:
   - download
-  command: make download-{{inventory_hostname}}
+  command: make -j{{ hostvars[inventory_hostname].get('make_threads') or hostvars[inventory_hostname].get('ansible_processor_vcpus') or hostvars[inventory_hostname].get('ansible_processor_cores') or 1 }} download-{{inventory_hostname}}
   args:
     chdir: "{{atraf_remote_config_dir}}"
   environment:
