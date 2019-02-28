@@ -368,7 +368,8 @@ def write_files_from_dir(writer, fromdir, todir):
 
 def write_bench_script(writer, config):
     script = 'bench.py'
-    content = open(script).read()
+    src = os.path.join(config.basedir, 'bench.py')
+    content = open(src).read()
     writer.open(script, True).write(content)
 
 def main(argv0, args):
