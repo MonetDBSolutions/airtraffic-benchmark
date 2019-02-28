@@ -1,0 +1,8 @@
+#!/bin/sh
+
+NPROC="$(nproc || echo 1)" 
+
+set -e 
+
+make -C "$1" download
+make -C "$1" drop schema insert
