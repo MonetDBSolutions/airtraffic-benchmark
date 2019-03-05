@@ -239,15 +239,16 @@ def write_makefile(writer, config):
 	print >>f
 	for n in config.nodes:
 		c = config.for_node(n)
-		if not c.partition:
-			print >>f, "download-%(node)s:" % c
-			continue
-		print >>f, "download-%(node)s: \\" % c
-		for p in c.partition:
-			backslash = "\\" if p != c.partition[-1] else ""
-			print >>f, "\t\t$(DATA_DIR)/%s %s" % (p.load_file, backslash)
+		print >>f, "download-%(node)s:" % c,
+		for p in sorted(set(p.load_file for p in c.partition)):
+			print >>f, "\\\n\t\t$(DATA_DIR)/%s" % p,
+		print >>f, ""
 	print >>f
+        seen = set() # instances of Part are unequal even if they're equal
 	for p in config.parts:
+                if p.fetch_file in seen:
+                    continue
+                seen.add(p.fetch_file)
 		if p.load_file != p.fetch_file:
 			print >>f, "$(DATA_DIR)/%(load_file)s: $(DATA_DIR)/%(fetch_file)s" % p
 			if p.fetch_file.endswith('.xz'):

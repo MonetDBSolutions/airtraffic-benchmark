@@ -212,14 +212,24 @@ def generate_schema(f, conf):
 	print >>f, ""
 
 	print >>f, "CREATE VIEW missing_rows AS"
-	print >>f, "SELECT"
-	print >>f, "        e.\"Year\" AS \"Year\","
-	print >>f, "        e.\"Month\" AS \"Month\","
-	print >>f, "        e.\"Rows\" AS expected,"
-	print >>f, "        (SELECT COUNT(*) FROM \"ontime\" AS o WHERE o.\"Year\" = e.\"Year\" AND o.\"Month\" = e.\"Month\") AS actual"
-	print >>f, "FROM"
-	print >>f, "        expected_rows AS e"
-	print >>f, ";"
+        print >>f, "WITH e AS ("
+        print >>f, "	SELECT \"Year\", \"Month\", SUM(\"Rows\") AS expected"
+        print >>f, "	FROM expected_rows"
+        print >>f, "	GROUP BY \"Year\", \"Month\""
+        print >>f, "),"
+        print >>f, "a AS ("
+        print >>f, "	SELECT \"Year\", \"Month\", COUNT(*)  AS actual"
+        print >>f, "	FROM ontime"
+        print >>f, "	GROUP BY \"Year\", \"Month\""
+        print >>f, ")"
+        print >>f, "SELECT e.\"Year\", e.\"Month\", expected, actual"
+        print >>f, "FROM e FULL OUTER JOIN a ON e.\"Year\" = a.\"Year\" AND e.\"Month\" = a.\"Month\""
+        print >>f, "WHERE expected IS NULL OR actual IS NULL OR expected <> actual"
+        print >>f, "ORDER BY \"Year\", \"Month\""
+        print >>f, ";"
+
+
+
 
 def generate_inserts(f, conf):
 	print >>f, "SET SCHEMA atraf;"
