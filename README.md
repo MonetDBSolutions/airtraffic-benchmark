@@ -90,7 +90,7 @@ Then, on the master node, `make validate`.
 The Makefile accepts an additional parameter `NODENAME=bla` that can
 be used to override the output of the `hostname` command.
 By default, the Makefile will download data files into the directory
-`../atraf-data`.  This can be overridden with the `DATA_DIR=` setting.
+`../atraf-data`.  This can be overridden with the `DOWNLOAD_DIR=` setting.
 Also, `MCLIENT_PREFIX=` can be used to indicate the location of the
 `mclient` binary.  There are more settings, these are all documented
 at the top of the Makefile.

@@ -75,6 +75,7 @@ class Config(object):
 		'compression',
 		'load_compressed',
                 'data_location',
+		'download_dir',
 	]
 
 	def __init__(self):
@@ -198,7 +199,7 @@ def write_makefile(writer, config):
 	print >>f, "# Generated file, do not edit"
 	print >>f
 	print >>f, "DATA_LOCATION = %(data_location)s" % config
-	print >>f, "DATA_DIR = ../atraf-data"
+	print >>f, "DOWNLOAD_DIR = %(download_dir)s" % config
 	print >>f
 	print >>f, "# Will be invoked as $(FETCH) TARGET_FILE SOURCE_URL"
 	print >>f, "# Alternative: curl -s -o"
@@ -241,7 +242,7 @@ def write_makefile(writer, config):
 		c = config.for_node(n)
 		print >>f, "download-%(node)s:" % c,
 		for p in sorted(set(p.load_file for p in c.partition)):
-			print >>f, "\\\n\t\t$(DATA_DIR)/%s" % p,
+			print >>f, "\\\n\t\t$(DOWNLOAD_DIR)/%s" % p,
 		print >>f, ""
 	print >>f
         seen = set() # instances of Part are unequal even if they're equal
@@ -250,7 +251,7 @@ def write_makefile(writer, config):
                     continue
                 seen.add(p.fetch_file)
 		if p.load_file != p.fetch_file:
-			print >>f, "$(DATA_DIR)/%(load_file)s: $(DATA_DIR)/%(fetch_file)s" % p
+			print >>f, "$(DOWNLOAD_DIR)/%(load_file)s: $(DOWNLOAD_DIR)/%(fetch_file)s" % p
 			if p.fetch_file.endswith('.xz'):
 				print >>f, "\txz -d <$^ >$@.tmp"
 			elif p.fetch_file.endswith('gz'):
@@ -258,15 +259,15 @@ def write_makefile(writer, config):
 			else:
 				raise ErrMsg("Don't know how to decompress %s" % p.fetch_file)
 			print >>f, "\tmv $@.tmp $@"
-		print >>f, "$(DATA_DIR)/%(fetch_file)s: $(DATA_DIR)/.dir" % p
+		print >>f, "$(DOWNLOAD_DIR)/%(fetch_file)s: $(DOWNLOAD_DIR)/.dir" % p
 		print >>f, "\t$(FETCH) $@.tmp $(DATA_LOCATION)/%(fetch_file)s" % p
 		print >>f, "\tmv $@.tmp $@"
 	print >>f
 
 	print >>f, "# The downloaded files have a dependency on this file."
 	print >>f, "# To avoid redownloading them we set the timestamp far in the past"
-	print >>f, "$(DATA_DIR)/.dir:"
-	print >>f, "\tmkdir -p $(DATA_DIR)"
+	print >>f, "$(DOWNLOAD_DIR)/.dir:"
+	print >>f, "\tmkdir -p $(DOWNLOAD_DIR)"
 	print >>f, "\ttouch -t 198510260124 $@"
 	print >>f
 
@@ -296,7 +297,7 @@ def write_makefile(writer, config):
 	for n in config.nodes:
 		c = config.for_node(n)
 		print >>f, "insert-%s:" % n
-		print >>f, "\t<insert-%(node)s.sql sed -e 's,@DATA_DIR@,$(abspath $(DATA_DIR)),' | $(MCLIENT_PREFIX)mclient -d %(url)s" % c
+		print >>f, "\t<insert-%(node)s.sql sed -e 's,@DOWNLOAD_DIR@,$(abspath $(DOWNLOAD_DIR)),' | $(MCLIENT_PREFIX)mclient -d %(url)s" % c
 	print >>f
 
 	print >>f, "validate: validate-rowcount",
@@ -387,6 +388,7 @@ def main(argv0, args):
 	config.compression = args.compression
 	config.load_compressed = args.load_compressed
         config.data_location = args.data_location
+        config.download_dir = args.download_dir
 
 	if not os.path.isfile(config.nodefile):
 		raise ErrMsg("Node file %s does not exist" % config.nodefile)
@@ -424,6 +426,10 @@ parser.add_argument('--load-compressed', help='do not decompress downloaded file
 )
 parser.add_argument('--data-location', help='http- or rsync location of the data files',
         default='https://s3.eu-central-1.amazonaws.com/atraf/atraf-data'
+)
+
+parser.add_argument('--download-dir', help='directory where downloaded data will be stored, relative to the Makefile',
+        default='../atraf-data'
 )
 
 if __name__ == "__main__":
