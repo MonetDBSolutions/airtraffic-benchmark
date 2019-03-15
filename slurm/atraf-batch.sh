@@ -81,9 +81,15 @@ srun -l "$SCRIPTS_DIR/create-db.sh" "$DBNAME"
 
 # STEP 3: Generate the airtraffic files
 mkdir -p "$WORK_DIR"
-srun "$SCRIPTS_DIR/nodefile-entry.sh" "$DBNAME" \
-        | sort | sed -e '1s/$/ nodata/' \
-                     >"$WORK_DIR/nodefile"
+srun "$SCRIPTS_DIR/nodefile-entry.sh" "$DBNAME" | sort > "$WORK_DIR/nodefile-entries"
+if [ $SLURM_JOB_NUM_NODES = 1 ]; then
+        cat "$WORK_DIR/nodefile-entries" > "$WORK_DIR/nodefile"
+else
+        sed -e '1s/$/ nodata/' \
+            <"$WORK_DIR/nodefile-entries" \
+            >"$WORK_DIR/nodefile"
+fi
+
 MASTER_NODE="$(sed -n -e '1s/ .*//p' "$WORK_DIR/nodefile")"
 
 "$ATRAF_DIR"/generate.py "$WORK_DIR/nodefile" "$SUBSET" "$WORK_DIR" "$@"
