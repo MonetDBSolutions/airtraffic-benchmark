@@ -33,10 +33,10 @@ SUBSET="${2?    $USAGE}"
 DURATION="${3?    $USAGE}"
 shift; shift; shift
 
-: "${ATRAF_DIR?}"
-: "${FARM_DIR?}"
-: "${EXPERIMENTS_DIR?}"
-: "${SCRIPTS_DIR:=$ATRAF_DIR/slurm}"
+: "ATRAF_DIR=${ATRAF_DIR?}"
+: "FARM_DIR=${FARM_DIR?}"
+: "EXPERIMENTS_DIR=${EXPERIMENTS_DIR?}"
+: "SCRIPTS_DIR=${SCRIPTS_DIR:=$ATRAF_DIR/slurm}"
 
 test -f "$ATRAF_DIR/generate.py"
 
@@ -73,7 +73,7 @@ srun -l "$SCRIPTS_DIR/prepare-data.sh" "$WORK_DIR"
 echo '==================================='
 
 #srun -N1 -n1 --pty bash
-srun -n1 -N1 -w "$MASTER_NODE" -D "$EXPERIMENTS_DIR" \
+srun -n1 -N1 -w "$MASTER_NODE" -D "$WORK_DIR" \
      ./bench.py "$DBNAME" --name "$EXPERIMENT" --duration "$DURATION" --max-queries 10000
 
 echo '==================================='
@@ -81,3 +81,4 @@ echo '==================================='
 srun -l "$SCRIPTS_DIR/stop-farm.sh" "$FARM_DIR"
 wait $FARM_PID
 
+echo DONE
