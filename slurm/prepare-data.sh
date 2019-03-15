@@ -2,7 +2,7 @@
 
 NPROC="$(nproc || echo 1)" 
 
-set -e 
+set -e
 
 make -j "$NPROC" -C "$1" download
 make -C "$1" drop schema insert

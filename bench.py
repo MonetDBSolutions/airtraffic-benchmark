@@ -1,5 +1,6 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 
+import argparse
 import glob
 import os
 import random
@@ -8,50 +9,53 @@ import sys
 import subprocess
 import time
 
-# for consistency with for example the Makefile
-# we use string concatenation here, not a proper os.path.join
+# for consistency with the Makefile we use string concatenation here,
+# not a proper os.path.join
 MCLIENT = os.environ.get('MCLIENT_PREFIX', '') + "mclient"
 
 class Issue(Exception):
     def __init__(self, msg):
         self.msg = msg
 
-def sayer(outfilename):
-    if outfilename:
-        outfile = open(outfilename, 'a')
-    else:
-        outfile = None
+def writer(outfilename, also_stdout):
+    outfile = open(outfilename, 'a')
 
-    def say(fmt, *args):
+    def write(fmt, *args):
         line = fmt % args
-        print line
-        if outfile:
-            print >>outfile, line
-            outfile.flush()
+        if also_stdout:
+            print line
+        print >>outfile, line
+        outfile.flush()
 
-    return say
+    return write
 
 def qq(s):
     if '"' in s or '\\' in s:
         raise("Oops")
     return '"' + s + '"'
 
-def main(argv0, config, db, duration_in_seconds=None):
-    deadline = time.time() + int(duration_in_seconds) if duration_in_seconds else float("inf")
+def main(args):
+    config = args.name or args.db
+    deadline = time.time() + (args.duration or float("inf"))
+    max_queries = args.max_queries or float("inf")
+
+    outfilename = config + ".csv"
+    if args.output:
+        if os.path.isdir(args.output):
+            outfilename = os.path.join(args.output, outfilename)
+        else:
+            outfilename = args.output
+
     show_header = True
     seq = 0
-    say = sayer(None)
-    if config:
-        outfilename = config + '.csv'
-        say = sayer(outfilename)
-        if os.path.exists(outfilename):
-            contents = open(outfilename).readlines()
-	    show_header = not contents
-            if len(contents) > 1:
-                last = contents[-1]
-                seq = int(last.split(',')[1])
-    else:
-        config = 'adhoc'
+
+    if os.path.exists(outfilename):
+        contents = open(outfilename).readlines()
+        show_header = not contents
+        if len(contents) > 1:
+            last = contents[-1]
+            seq = int(last.split(',')[1])
+    write = writer(outfilename, not args.silent)
 
     queries = glob.glob('sql/q??.sql')
     if not queries:
@@ -60,14 +64,22 @@ def main(argv0, config, db, duration_in_seconds=None):
     rnd = random.Random(0)
 
     if show_header:
-        say("config,seqno,query,duration")
-    while time.time() < deadline:
+        write("config,seqno,query,duration")
+    count = 0
+    done = False
+    while not done:
         rnd.shuffle(queries)   # in-place, ew!
         for q in queries:
+            if time.time() >= deadline or count >= max_queries:
+                done = True
+                break
             seq += 1
-            duration = run(db, q)
+            count += 1
+            duration = run(args.db, q)
             name = os.path.splitext(os.path.basename(q))[0]
-            say("%s,%d,%s,%f", qq(config), seq, qq(name), duration)
+            write("%s,%d,%s,%f", qq(config), seq, qq(name), duration)
+
+    return 0
 
 def run(db, queryfile):
     # /usr/bin/env searches the PATH for us
@@ -89,10 +101,26 @@ def run(db, queryfile):
     return float(m.group(1))
 
 
+parser = argparse.ArgumentParser(description='Repeatedly run benchmarks')
+parser.add_argument('db',
+                    help='Database name')
+parser.add_argument('--name', '-n',
+                    help='Config name, used to label the results, defaults to database name')
+parser.add_argument('--duration', '-d', type=int,
+                    help='After this many seconds no new queries are started')
+parser.add_argument('--max-queries', '-N', type=int,
+                    help='Max number of queries to execute before exiting')
+parser.add_argument('--output', '-o',
+                    help='File or directory to write output to, defaults to ./<CONFIG>.csv')
+parser.add_argument('--silent', action='store_true',
+                    help='Do not write the results to stdout')
+
 
 if __name__ == "__main__":
     try:
-        sys.exit(main(*sys.argv))
+        args = parser.parse_args()
+        status = main(args)
+        sys.exit(status or 0)
     except Issue, e:
         print >>sys.stderr, "An error occurred:", e.msg
         sys.exit(1)
