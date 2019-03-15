@@ -21,6 +21,29 @@
 # being this MUST be on a shared file system.
 #
 # SCRIPTS_DIR: location of the helper scripts. Default: $ATRAF_DIR/slurm.
+#
+#
+# The most convenient way to use this script is to wrap it in a
+# wrapper script which sets these variables to sane
+# environment-specific values.  For example:
+#
+#    #!/bin/bash
+#    set -e
+#
+#    unset LC_ALL LANG LC_CTYPE LC_COLLATE LC_NUMERIC LC_TIME LC_MONETARY LC_MESSAGES
+#    export LANG=C
+#
+#    # this sets the path to MonetDB
+#    source "$HOME"/Aug2018-SP2/env
+#
+#    export ATRAF_DIR="/shared/airtraffic-benchmark"
+#    export EXPERIMENTS_DIR="/shared/EXP/experiments"
+#    export FARM_DIR="$HOME/farms"
+#
+#    #export DROP_AFTER=yes
+#
+#    exec "$ATRAF_DIR/slurm/atraf-batch.sh" "$@"
+
 
 USAGE='Usage: sbatch -N3 atraf-batch.sh EXPERIMENTNAME SUBSET DURATION [GENERATE_OPTS...]'
 
