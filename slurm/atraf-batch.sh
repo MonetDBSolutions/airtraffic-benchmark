@@ -37,6 +37,7 @@ shift; shift; shift
 : "FARM_DIR=${FARM_DIR?}"
 : "EXPERIMENTS_DIR=${EXPERIMENTS_DIR?}"
 : "SCRIPTS_DIR=${SCRIPTS_DIR:=$ATRAF_DIR/slurm}"
+: "DROP_AFTER=${DROP_AFTER:=no}"
 
 test -f "$ATRAF_DIR/generate.py"
 
@@ -77,6 +78,10 @@ srun -n1 -N1 -w "$MASTER_NODE" -D "$WORK_DIR" \
      ./bench.py "$DBNAME" --name "$EXPERIMENT" --duration "$DURATION" --max-queries 10000
 
 echo '==================================='
+
+if [ "$DROP_AFTER" = "yes" ]; then
+        srun -l -D "$WORK_DIR" make drop
+fi
 
 srun -l "$SCRIPTS_DIR/stop-farm.sh" "$FARM_DIR"
 wait $FARM_PID
