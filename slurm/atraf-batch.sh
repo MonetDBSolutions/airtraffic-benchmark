@@ -47,7 +47,7 @@
 
 USAGE='Usage: sbatch -N3 atraf-batch.sh EXPERIMENTNAME SUBSET DURATION [GENERATE_OPTS...]'
 
-: "${SLURM_JOB_ID?This script is meant to be run as a Slurm Job}"
+echo "SLURM_JOB_ID=${SLURM_JOB_ID?This script is meant to be run as a Slurm Job}"
 
 set -e -x
 
@@ -109,7 +109,8 @@ srun -n1 -N1 -w "$MASTER_NODE" -D "$WORK_DIR" \
 echo '==================================='
 
 if [ "$DROP_AFTER" = "yes" ]; then
-        srun -l -D "$WORK_DIR" make drop
+	srun -l -D "$WORK_DIR" monetdb stop "$DBNAME"
+	srun -l -D "$WORK_DIR" monetdb destroy -f "$DBNAME"
 fi
 
 srun -l "$SCRIPTS_DIR/stop-farm.sh" "$FARM_DIR"
