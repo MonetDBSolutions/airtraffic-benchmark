@@ -294,6 +294,10 @@ def write_makefile(writer, config):
 	print >>f
 
 	print >>f, "insert: insert-$(NODENAME)"
+	print >>f, "insert-all:",
+	for n in config.nodes:
+		print >>f, "insert-%s" % n,
+	print >>f
 	for n in config.nodes:
 		c = config.for_node(n)
 		print >>f, "insert-%s:" % n
