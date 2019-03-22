@@ -266,23 +266,23 @@ def write_makefile(writer, config):
 	print >>f, "schema-all:", " ".join("schema-%s" % n for n in config.nodes)
 	for n in config.nodes:
 		c = config.for_node(n)
-		print >>f, "schema-%s: local-schema-%s remote-schema-%s" % (n, n, n)
+		print >>f, "schema-%s: schema-local-%s schema-remote-%s" % (n, n, n)
 	print >>f
 
-	print >>f, "local-schema: schema-$(NODENAME)"
-	print >>f, "local-schema-all:", " ".join("local-schema-%s" % n for n in config.nodes)
+	print >>f, "schema-local: schema-$(NODENAME)"
+	print >>f, "schema-local-all:", " ".join("schema-local-%s" % n for n in config.nodes)
 	for n in config.nodes:
 		c = config.for_node(n)
-		print >>f, "local-schema-%s:" % n
-		print >>f, "\t$(MCLIENT_PREFIX)mclient -d %(url)s local-schema-%(node)s.sql " % c
+		print >>f, "schema-local-%s:" % n
+		print >>f, "\t$(MCLIENT_PREFIX)mclient -d %(url)s schema-local-%(node)s.sql " % c
 	print >>f
 
-	print >>f, "remote-schema: remote-schema-$(NODENAME)"
-	print >>f, "remote-schema-all:", " ".join("remote-schema-%s" % n for n in config.nodes)
+	print >>f, "schema-remote: schema-remote-$(NODENAME)"
+	print >>f, "schema-remote-all:", " ".join("schema-remote-%s" % n for n in config.nodes)
 	for n in config.nodes:
 		c = config.for_node(n)
-		print >>f, "remote-schema-%s:" % n
-		print >>f, "\t$(MCLIENT_PREFIX)mclient -d %(url)s remote-schema-%(node)s.sql " % c
+		print >>f, "schema-remote-%s:" % n
+		print >>f, "\t$(MCLIENT_PREFIX)mclient -d %(url)s schema-remote-%(node)s.sql " % c
 	print >>f
 
 	print >>f, "drop: drop-$(NODENAME)"
@@ -349,9 +349,9 @@ def write_makefile(writer, config):
 
 
 def write_schema(writer, conf):
-	f = writer.open('local-schema-%(node)s.sql' % conf)
+	f = writer.open('schema-local-%(node)s.sql' % conf)
 	schema_sql.generate_local_schema(f, conf)
-	f = writer.open('remote-schema-%(node)s.sql' % conf)
+	f = writer.open('schema-remote-%(node)s.sql' % conf)
 	schema_sql.generate_remote_schema(f, conf)
 
 def write_inserts(writer, conf):
