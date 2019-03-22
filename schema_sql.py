@@ -1,5 +1,5 @@
 
-def generate_schema(f, conf):
+def generate_local_schema(f, conf):
 	print >>f, "-- DROP SCHEMA IF EXISTS atraf CASCADE;"
 	print >>f, "CREATE SCHEMA atraf;"
 	print >>f, "SET SCHEMA atraf;"
@@ -128,18 +128,11 @@ def generate_schema(f, conf):
 
 	if not conf.distributed:
 		tmp_name = "tmp"
-		print >>f, "CREATE TABLE \"tmp\" ( LIKE tmp_template );"
 	else:
 		tmp_name = "tmp_%s" % conf.node
-		print >>f, "CREATE REPLICA TABLE tmp ( LIKE tmp_template );"
-		for node in conf.nodes:
-			if node == conf.node:
-				print >>f, "CREATE TABLE \"tmp_%(node)s\" ( LIKE tmp_template );" % conf
-			else:
-				print >>f, "CREATE REMOTE TABLE \"tmp_%s\" (LIKE tmp_template)" % node,
-				print >>f, "ON '%s';" % conf.urls[node]
-			print >>f, "ALTER TABLE tmp ADD TABLE \"tmp_%s\";" % node
-		print >>f, ""
+
+	print >>f, "CREATE TABLE \"%s\" ( LIKE tmp_template );" % tmp_name
+	print >>f, ""
 
 	print >>f, "INSERT INTO \"%s\" (\"Hour\")" % tmp_name
 	print >>f, "VALUES"
@@ -157,13 +150,50 @@ def generate_schema(f, conf):
 	if not conf.distributed:
 		print >>f, "CREATE TABLE \"ontime\" ( LIKE \"ontime_template\" );"
 	else:
+		if conf.partitions[conf.node]:
+			print >>f, "CREATE TABLE \"ontime_%s\" ( LIKE \"ontime_template\" );" % conf.node
+
+	print >>f, "-- Used to check if COPY INTO BEST EFFORT lost any rows"
+	print >>f, "CREATE TABLE expected_rows ( \"Year\" INT, \"Month\" INT, \"Rows\" INT );"
+	all_parts = [part for _host, parts in conf.partitions.items() for part in parts]
+	all_parts = sorted(all_parts, key=lambda p: (p.year, p.month))
+	if all_parts:
+		print >>f, "INSERT INTO expected_rows(\"Year\", \"Month\", \"Rows\") VALUES"
+		for part in all_parts:
+			end = "," if part != all_parts[-1] else ";"
+			print >>f, "        (%d, %d, %d)%s" % (part.year, part.month, part.lines - 1, end)
+	print >>f, ""
+
+#################################################################################################################
+#################################################################################################################
+#################################################################################################################
+#################################################################################################################
+#################################################################################################################
+#################################################################################################################
+#################################################################################################################
+#################################################################################################################
+#################################################################################################################
+#################################################################################################################
+
+def generate_remote_schema(f, conf):
+	print >>f, "SET SCHEMA atraf;"
+
+	if conf.distributed:
+		tmp_name = "tmp_%s" % conf.node
+		print >>f, "CREATE REPLICA TABLE tmp ( LIKE tmp_template );"
+		for node in conf.nodes:
+			if node != conf.node:
+				print >>f, "CREATE REMOTE TABLE \"tmp_%s\" (LIKE tmp_template)" % node,
+				print >>f, "ON '%s';" % conf.urls[node]
+			print >>f, "ALTER TABLE tmp ADD TABLE \"tmp_%s\";" % node
+		print >>f, ""
+
+	if conf.distributed:
 		print >>f, "CREATE MERGE TABLE \"ontime\" ( LIKE \"ontime_template\" );"
 		for node in conf.nodes:
 			if not conf.partitions[node]:
 				continue
-			if node == conf.node:
-				print >>f, "CREATE TABLE \"ontime_%s\" ( LIKE \"ontime_template\" );" % node
-			else:
+			if node != conf.node:
 				print >>f, "CREATE REMOTE TABLE \"ontime_%s\" ( LIKE \"ontime_template\" ) " % node
 				print >>f, "    ON '%s';" % conf.urls[node]
 			print >>f, "ALTER TABLE \"ontime\" ADD TABLE \"ontime_%s\";" % node
@@ -198,17 +228,6 @@ def generate_schema(f, conf):
 	print >>f, "        GROUP BY low"
 	print >>f, "        ORDER BY low;"
 	print >>f, "END;"
-	print >>f, ""
-
-	print >>f, "-- Used to check if COPY INTO BEST EFFORT lost any rows"
-	print >>f, "CREATE TABLE expected_rows ( \"Year\" INT, \"Month\" INT, \"Rows\" INT );"
-	all_parts = [part for _host, parts in conf.partitions.items() for part in parts]
-	all_parts = sorted(all_parts, key=lambda p: (p.year, p.month))
-	if all_parts:
-		print >>f, "INSERT INTO expected_rows(\"Year\", \"Month\", \"Rows\") VALUES"
-		for part in all_parts:
-			end = "," if part != all_parts[-1] else ";"
-			print >>f, "        (%d, %d, %d)%s" % (part.year, part.month, part.lines - 1, end)
 	print >>f, ""
 
 	print >>f, "CREATE VIEW missing_rows AS"

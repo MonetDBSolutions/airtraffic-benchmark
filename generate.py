@@ -220,10 +220,7 @@ def write_makefile(writer, config):
 	print >>f
 
 	print >>f, "ping: ping-$(NODENAME)"
-	print >>f, "ping-all:",
-	for n in config.nodes:
-		print >>f, "ping-%s" % n,
-	print >>f
+	print >>f, "ping-all:"," ".join("ping-%s" % n for n in config.nodes)
 	for n in config.nodes:
 		c = config.for_node(n)
 		print >>f, "ping-%(node)s:" % c
@@ -231,13 +228,7 @@ def write_makefile(writer, config):
 	print >>f
 
 	print >>f, "download: download-$(NODENAME)"
-	print >>f, "download-all:",
-	for n in config.nodes:
-		c = config.for_node(n)
-		if not c.partition:
-			continue
-		print >>f, "download-%s" % n,
-	print >>f
+	print >>f, "download-all:"," ".join("download-%s" % n for n in config.nodes if config.for_node(n).partition)
 	for n in config.nodes:
 		c = config.for_node(n)
 		print >>f, "download-%(node)s:" % c,
@@ -272,21 +263,30 @@ def write_makefile(writer, config):
 	print >>f
 
 	print >>f, "schema: schema-$(NODENAME)"
-	print >>f, "schema-all:",
-	for n in config.nodes:
-		print >>f, "schema-%s" % n,
-	print >>f
+	print >>f, "schema-all:", " ".join("schema-%s" % n for n in config.nodes)
 	for n in config.nodes:
 		c = config.for_node(n)
-		print >>f, "schema-%s:" % n
-		print >>f, "\t$(MCLIENT_PREFIX)mclient -d %(url)s schema-%(node)s.sql " % c
+		print >>f, "schema-%s: local-schema-%s remote-schema-%s" % (n, n, n)
+	print >>f
+
+	print >>f, "local-schema: schema-$(NODENAME)"
+	print >>f, "local-schema-all:", " ".join("local-schema-%s" % n for n in config.nodes)
+	for n in config.nodes:
+		c = config.for_node(n)
+		print >>f, "local-schema-%s:" % n
+		print >>f, "\t$(MCLIENT_PREFIX)mclient -d %(url)s local-schema-%(node)s.sql " % c
+	print >>f
+
+	print >>f, "remote-schema: remote-schema-$(NODENAME)"
+	print >>f, "remote-schema-all:", " ".join("remote-schema-%s" % n for n in config.nodes)
+	for n in config.nodes:
+		c = config.for_node(n)
+		print >>f, "remote-schema-%s:" % n
+		print >>f, "\t$(MCLIENT_PREFIX)mclient -d %(url)s remote-schema-%(node)s.sql " % c
 	print >>f
 
 	print >>f, "drop: drop-$(NODENAME)"
-	print >>f, "drop-all:",
-	for n in config.nodes:
-		print >>f, "drop-%s" % n,
-	print >>f
+	print >>f, "drop-all:"," ".join("drop-%s" % n for n in config.nodes)
 	for n in config.nodes:
 		c = config.for_node(n)
 		print >>f, "drop-%s:" % n
@@ -294,10 +294,7 @@ def write_makefile(writer, config):
 	print >>f
 
 	print >>f, "insert: insert-$(NODENAME)"
-	print >>f, "insert-all:",
-	for n in config.nodes:
-		print >>f, "insert-%s" % n,
-	print >>f
+	print >>f, "insert-all:"," ".join("insert-%s" % n for n in config.nodes)
 	for n in config.nodes:
 		c = config.for_node(n)
 		print >>f, "insert-%s:" % n
@@ -352,8 +349,10 @@ def write_makefile(writer, config):
 
 
 def write_schema(writer, conf):
-	f = writer.open('schema-%(node)s.sql' % conf)
-	schema_sql.generate_schema(f, conf)
+	f = writer.open('local-schema-%(node)s.sql' % conf)
+	schema_sql.generate_local_schema(f, conf)
+	f = writer.open('remote-schema-%(node)s.sql' % conf)
+	schema_sql.generate_remote_schema(f, conf)
 
 def write_inserts(writer, conf):
 	f = writer.open('insert-%(node)s.sql' % conf)
