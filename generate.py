@@ -74,7 +74,8 @@ class Config(object):
 		'queries',
 		'compression',
 		'load_compressed',
-                'data_location',
+		'data_location',
+		'premade_location',
 		'download_dir',
 	]
 
@@ -102,6 +103,8 @@ class NodeConfig(Config):
 		'url',
 		'partition',
 		'node_suffix',
+		'premade',
+		'premade_archive_name',
 	]
 
 	def __init__(self, config, node):
@@ -112,6 +115,12 @@ class NodeConfig(Config):
 		self.url = config.urls[node]
 		self.partition = config.partitions[node][:]
 		self.node_suffix = "" if not config.distributed else "_%s" % self.node
+		self.premade = "%s_%dx_%d" % (
+			config.subset,
+			len(config.nodes),
+			config.nodes.index(node),
+		)
+		self.premade_archive_name = self.premade + '.tar.' + config.compression
 
 class Part:
 	__slots__ = ['name', 'load_file', 'fetch_file', 'lines', 'year', 'month']
@@ -199,14 +208,15 @@ def write_makefile(writer, config):
 	print >>f, "# Generated file, do not edit"
 	print >>f
 	print >>f, "DATA_LOCATION = %(data_location)s" % config
+	print >>f, "PREMADE_LOCATION = %(premade_location)s" % config
 	print >>f, "DOWNLOAD_DIR = %(download_dir)s" % config
 	print >>f
 	print >>f, "# Will be invoked as $(FETCH) TARGET_FILE SOURCE_URL"
 	print >>f, "# Alternative: curl -s -o"
 	if config.data_location.startswith('rsync'):
-	        print >>f, 'FETCH = swapargs() { X="$$1"; shift; Y="$$1"; shift; rsync "$$Y" "$$X" "$$@"; }; swapargs'
-        else:
-                print >>f, "FETCH = wget -q -O"
+		print >>f, 'FETCH = swapargs() { X="$$1"; shift; Y="$$1"; shift; rsync "$$Y" "$$X" "$$@"; }; swapargs'
+	else:
+		print >>f, "FETCH = wget -q -O"
 	print >>f
 	print >>f, "NODENAME := $(shell hostname -s)"
 	print >>f, "DB_URL=$(DB_URL_$(NODENAME))"
@@ -236,11 +246,11 @@ def write_makefile(writer, config):
 			print >>f, "\\\n\t\t$(DOWNLOAD_DIR)/%s" % p,
 		print >>f, ""
 	print >>f
-        seen = set() # instances of Part are unequal even if they're equal
+	seen = set() # instances of Part are unequal even if they're equal
 	for p in config.parts:
-                if p.fetch_file in seen:
-                    continue
-                seen.add(p.fetch_file)
+		if p.fetch_file in seen:
+		    continue
+		seen.add(p.fetch_file)
 		if p.load_file != p.fetch_file:
 			print >>f, "$(DOWNLOAD_DIR)/%(load_file)s: $(DOWNLOAD_DIR)/%(fetch_file)s" % p
 			if p.fetch_file.endswith('.xz'):
@@ -252,6 +262,18 @@ def write_makefile(writer, config):
 			print >>f, "\tmv $@.tmp $@"
 		print >>f, "$(DOWNLOAD_DIR)/%(fetch_file)s: $(DOWNLOAD_DIR)/.dir" % p
 		print >>f, "\t$(FETCH) $@.tmp $(DATA_LOCATION)/%(fetch_file)s" % p
+		print >>f, "\tmv $@.tmp $@"
+	print >>f
+
+	print >>f, "download-premade: download-premade-$(NODENAME)"
+	print >>f, "download-premade-all:", " ".join("download-premade-%s" % n for n in config.nodes)
+	for n in config.nodes:
+		print >>f, "download-premade-%s: $(DOWNLOAD_DIR)/%s" % (n, config.for_node(n).premade_archive_name)
+	print >>f
+	for n in config.nodes:
+		archive = config.for_node(n).premade_archive_name
+		print >>f, "$(DOWNLOAD_DIR)/%s: $(DOWNLOAD_DIR)/.dir" % archive
+		print >>f, "\t$(FETCH) $@.tmp $(PREMADE_LOCATION)/%s" % archive
 		print >>f, "\tmv $@.tmp $@"
 	print >>f
 
@@ -299,6 +321,20 @@ def write_makefile(writer, config):
 		c = config.for_node(n)
 		print >>f, "insert-%s:" % n
 		print >>f, "\t<insert-%(node)s.sql sed -e 's,@DOWNLOAD_DIR@,$(abspath $(DOWNLOAD_DIR)),' | $(MCLIENT_PREFIX)mclient -d %(url)s" % c
+	print >>f
+
+	print >>f, "unpack-readymade: unpack-readymade-$(NODENAME)"
+	print >>f, "unpack-readymade-all:"," ".join("unpack-readymade-%s" % n for n in config.nodes)
+	for n in config.nodes:
+		c = config.for_node(n)
+		destname = c.url[c.url.rindex('/') + 1:]
+		print >>f, "unpack-readymade-%s:" % n
+		print >>f, "\ttest -d '$(DBFARM_DIR)' # please set DBFARM_DIR from the command line"
+		print >>f, "\tmkdir '$(DBFARM_DIR)/%s' # should not exist yet" % destname
+		print >>f, "\t%s -d < '$(DOWNLOAD_DIR)/%s' | tar -x -f- -C '$(DBFARM_DIR)/%s' --strip-components=1" % (
+			config.compression, 
+			c.premade_archive_name, 
+			destname)
 	print >>f
 
 	print >>f, "validate: validate-rowcount",
@@ -390,8 +426,9 @@ def main(argv0, args):
 	config.outputdir = os.path.abspath(args.outputdir)  # not relative to basedir
 	config.compression = args.compression
 	config.load_compressed = args.load_compressed
-        config.data_location = args.data_location
-        config.download_dir = args.download_dir
+	config.data_location = args.data_location
+	config.premade_location = args.premade_location
+	config.download_dir = args.download_dir
 
 	if not os.path.isfile(config.nodefile):
 		raise ErrMsg("Node file %s does not exist" % config.nodefile)
@@ -428,11 +465,14 @@ parser.add_argument('--load-compressed', help='do not decompress downloaded file
 	action='store_true'
 )
 parser.add_argument('--data-location', help='http- or rsync location of the data files',
-        default='https://s3.eu-central-1.amazonaws.com/atraf/atraf-data'
+	default='https://s3.eu-central-1.amazonaws.com/atraf/atraf-data'
+)
+parser.add_argument('--premade-location', help='http- or rsync location of premade database tar files',
+	default='https://s3.eu-central-1.amazonaws.com/atraf/atraf-data/linux-amd64/Aug2018-SP2'
 )
 
 parser.add_argument('--download-dir', help='directory where downloaded data will be stored, relative to the Makefile',
-        default='../atraf-data'
+	default='../atraf-data'
 )
 
 if __name__ == "__main__":
