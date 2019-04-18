@@ -100,6 +100,7 @@ class Config(object):
 
 class NodeConfig(Config):
 	__slots__ = Config.__slots__ + [
+                'nodenum',
 		'node',
 		'url',
 		'partition',
@@ -113,6 +114,7 @@ class NodeConfig(Config):
 			if hasattr(config, a):
 				setattr(self, a, getattr(config, a))
 		self.node = node
+                self.nodenum = config.nodes.index(node)
 		self.url = config.urls[node]
 		self.partition = config.partitions[node][:]
 		self.node_suffix = "" if not config.distributed else "_%s" % self.node

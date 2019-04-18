@@ -177,7 +177,7 @@ def generate_local_schema(f, conf):
 	print >>f, BEFORE
 
 	if conf.distributed:
-		tmp_data = "tmp_%s" % conf.node
+		tmp_data = "tmp_node%d" % conf.nodenum
 		print >>f, "CREATE REPLICA TABLE tmp (LIKE tmp_template);"
 		print >>f, "CREATE TABLE \"%s\" (LIKE tmp_template);" % tmp_data
 		print >>f, "ALTER TABLE tmp ADD TABLE \"%s\";" % tmp_data
@@ -197,8 +197,8 @@ def generate_local_schema(f, conf):
 
 	if conf.distributed:
 		print >>f, "CREATE MERGE TABLE ontime (LIKE ontime_template);"
-		print >>f, "CREATE TABLE \"ontime_%s\" (LIKE ontime_template);" % conf.node
-		print >>f, "ALTER TABLE ontime ADD TABLE \"ontime_%s\";" % conf.node
+		print >>f, "CREATE TABLE \"ontime_node%d\" (LIKE ontime_template);" % conf.nodenum
+		print >>f, "ALTER TABLE ontime ADD TABLE \"ontime_node%d\";" % conf.nodenum
 	else:
 		print >>f, "CREATE TABLE ontime (LIKE ontime_template);"
 	print >>f, ""
@@ -224,20 +224,20 @@ def generate_remote_schema(f, conf):
 	if not conf.distributed:
 		return
 
-	for node in conf.nodes:
+	for i, node in enumerate(conf.nodes):
 		if node != conf.node:
-			print >>f, "CREATE REMOTE TABLE \"tmp_%s\" (LIKE tmp_template)" % node,
+			print >>f, "CREATE REMOTE TABLE \"tmp_node%d\" (LIKE tmp_template)" % i,
 			print >>f, "ON '%s';" % conf.urls[node]
-			print >>f, "ALTER TABLE tmp ADD TABLE \"tmp_%s\";" % node
+			print >>f, "ALTER TABLE tmp ADD TABLE \"tmp_node%d\";" % i
 		print >>f, ""
 
-	for node in conf.nodes:
+	for i, node in enumerate(conf.nodes):
 		if not conf.partitions[node]:
 			continue
 		if node != conf.node:
-			print >>f, "CREATE REMOTE TABLE \"ontime_%s\" ( LIKE \"ontime_template\" ) " % node
+			print >>f, "CREATE REMOTE TABLE \"ontime_node%d\" ( LIKE \"ontime_template\" ) " % i
 			print >>f, "    ON '%s';" % conf.urls[node]
-			print >>f, "ALTER TABLE \"ontime\" ADD TABLE \"ontime_%s\";" % node
+			print >>f, "ALTER TABLE \"ontime\" ADD TABLE \"ontime_node%d\";" % i
 	print >>f, ""
 
 
@@ -247,7 +247,7 @@ def generate_inserts(f, conf):
 	print >>f, ""
 
 	if conf.distributed:
-		table_name = "ontime_%s" % conf.node
+		table_name = "ontime_node%d" % conf.nodenum
 		table_exists = len(conf.partition) > 0
 	else:
 		table_name = "ontime"
