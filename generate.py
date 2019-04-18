@@ -77,6 +77,7 @@ class Config(object):
 		'data_location',
 		'premade_location',
 		'download_dir',
+		'use_curl',
 	]
 
 	def __init__(self):
@@ -212,11 +213,14 @@ def write_makefile(writer, config):
 	print >>f, "DOWNLOAD_DIR = %(download_dir)s" % config
 	print >>f
 	print >>f, "# Will be invoked as $(FETCH) TARGET_FILE SOURCE_URL"
-	print >>f, "# Alternative: curl -s -o"
 	if config.data_location.startswith('rsync'):
 		print >>f, 'FETCH = swapargs() { X="$$1"; shift; Y="$$1"; shift; rsync "$$Y" "$$X" "$$@"; }; swapargs'
+        elif config.use_curl:
+		print >>f, "FETCH = curl -s -o"
+		print >>f, "# Alternative: wget -q -O"
 	else:
 		print >>f, "FETCH = wget -q -O"
+		print >>f, "# Alternative: curl -s -o"
 	print >>f
 	print >>f, "NODENAME := $(shell hostname -s)"
 	print >>f, "DB_URL=$(DB_URL_$(NODENAME))"
@@ -429,6 +433,7 @@ def main(argv0, args):
 	config.data_location = args.data_location
 	config.premade_location = args.premade_location
 	config.download_dir = args.download_dir
+	config.use_curl = args.use_curl
 
 	if not os.path.isfile(config.nodefile):
 		raise ErrMsg("Node file %s does not exist" % config.nodefile)
@@ -470,9 +475,11 @@ parser.add_argument('--data-location', help='http- or rsync location of the data
 parser.add_argument('--premade-location', help='http- or rsync location of premade database tar files',
 	default='https://s3.eu-central-1.amazonaws.com/atraf/atraf-data/linux-amd64/Aug2018-SP2'
 )
-
 parser.add_argument('--download-dir', help='directory where downloaded data will be stored, relative to the Makefile',
 	default='../atraf-data'
+)
+parser.add_argument('--use-curl', help='use curl rather than wget to download data',
+	action='store_true'
 )
 
 if __name__ == "__main__":
