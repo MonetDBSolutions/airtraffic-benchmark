@@ -295,7 +295,7 @@ def write_makefile(writer, config):
 		print >>f, "schema-%s: schema-local-%s schema-remote-%s" % (n, n, n)
 	print >>f
 
-	print >>f, "schema-local: schema-$(NODENAME)"
+	print >>f, "schema-local: schema-local-$(NODENAME)"
 	print >>f, "schema-local-all:", " ".join("schema-local-%s" % n for n in config.nodes)
 	for n in config.nodes:
 		c = config.for_node(n)
