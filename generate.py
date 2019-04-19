@@ -329,12 +329,12 @@ def write_makefile(writer, config):
 		print >>f, "\t<insert-%(node)s.sql sed -e 's,@DOWNLOAD_DIR@,$(abspath $(DOWNLOAD_DIR)),' | $(MCLIENT_PREFIX)mclient -d %(url)s" % c
 	print >>f
 
-	print >>f, "unpack-readymade: unpack-readymade-$(NODENAME)"
-	print >>f, "unpack-readymade-all:"," ".join("unpack-readymade-%s" % n for n in config.nodes)
+	print >>f, "unpack-premade: unpack-premade-$(NODENAME)"
+	print >>f, "unpack-premade-all:"," ".join("unpack-premade-%s" % n for n in config.nodes)
 	for n in config.nodes:
 		c = config.for_node(n)
 		destname = c.url[c.url.rindex('/') + 1:]
-		print >>f, "unpack-readymade-%s:" % n
+		print >>f, "unpack-premade-%s:" % n
 		print >>f, "\ttest -d '$(DBFARM_DIR)' # please set DBFARM_DIR from the command line"
 		print >>f, "\tmkdir '$(DBFARM_DIR)/%s' # should not exist yet" % destname
 		print >>f, "\t%s -d < '$(DOWNLOAD_DIR)/%s' | tar -x -f- -C '$(DBFARM_DIR)/%s' --strip-components=1" % (
