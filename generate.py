@@ -475,7 +475,7 @@ parser.add_argument('--data-location', help='http- or rsync location of the data
 	default='https://s3.eu-central-1.amazonaws.com/atraf/atraf-data'
 )
 parser.add_argument('--premade-location', help='http- or rsync location of premade database tar files',
-	default='https://s3.eu-central-1.amazonaws.com/atraf/atraf-data/linux-amd64/Aug2018-SP2'
+	default='https://s3.eu-central-1.amazonaws.com/atraf-premade/linux-amd64/Aug2018-SP2'
 )
 parser.add_argument('--download-dir', help='directory where downloaded data will be stored, relative to the Makefile',
 	default='../atraf-data'
