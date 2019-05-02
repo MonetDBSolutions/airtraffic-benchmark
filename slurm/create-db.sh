@@ -1,6 +1,7 @@
 #!/bin/bash
 
 : "${1?Usage: create-db.sh DBNAME}"
+TRACES_DIR="$2"
 
 
 set -e
@@ -12,7 +13,12 @@ monetdb status >/dev/null
 if monetdb create "$1" 2>/dev/null; then
         # newly created
         monetdb release "$1"
-else
-        # existing
-        monetdb start "$1" || true
+        if [ "$TRACES_DIR" != "" ]; then
+                T="$TRACES_DIR/$(hostname)"
+                rm -rf "$T"
+                mkdir -p "$T"
+                monetdb set profilerlogpath="$T" "$1"
+                monetdb set profilerbeatfreq=50 "$1"
+                monetdb set mal_for_all=yes "$1"
+        fi
 fi

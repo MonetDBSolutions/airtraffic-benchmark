@@ -16,7 +16,10 @@ if [ ! -f "$FARM/.merovingian_properties" ]; then
 fi
 
 if monetdbd get status "$FARM" | grep "no monetdbd is serving this dbfarm" >/dev/null; then
+        echo "Starting farm $FARM"
 	monetdbd start "$FARM"
+else
+        echo "Farm $FARM seems to be running already"
 fi
 
 #echo "Farm $FARM is running"

@@ -20,8 +20,16 @@
 # generated in the directory $EXPERIMENTS_DIR/$EXPERIMENT_NAME.  For the time
 # being this MUST be on a shared file system.
 #
+#
+# Also:
+#
 # SCRIPTS_DIR: location of the helper scripts. Default: $ATRAF_DIR/slurm.
 #
+# DROP_AFTER: if "yes", drop the database after use to save space. Default: "no".
+#
+# KEEP_TRACES: if "yes", keep execution traces. Default: "no".
+#
+# REPEAT: number of times to repeat each query, unless time runs out. Default: 100
 #
 # The most convenient way to use this script is to wrap it in a
 # wrapper script which sets these variables to sane
@@ -61,12 +69,18 @@ shift; shift; shift
 : "EXPERIMENTS_DIR=${EXPERIMENTS_DIR?}"
 : "SCRIPTS_DIR=${SCRIPTS_DIR:=$ATRAF_DIR/slurm}"
 : "DROP_AFTER=${DROP_AFTER:=no}"
+: "KEEP_TRACES=${KEEP_TRACES:=no}"
+: "REPEAT=${REPEAT:=100}"
 
 test -f "$ATRAF_DIR/generate.py"
 
 WORK_DIR="$EXPERIMENTS_DIR/$EXPERIMENT"
 DBNAME="$EXPERIMENT"
-
+if [ "$KEEP_TRACES" != "" ]; then
+        TRACES_DIR="$WORK_DIR/traces/"
+else
+        TRACES_DIR=""
+fi
 # STEP 1: Make sure MonetDB is running
 #
 # Note: background job! Slurm will kill it when we're done
@@ -77,7 +91,7 @@ FARM_PID=$!
 srun -l "$SCRIPTS_DIR/await-farm.sh" "$FARM_DIR"
 
 # STEP 2: Create the database
-srun -l "$SCRIPTS_DIR/create-db.sh" "$DBNAME"
+srun -l "$SCRIPTS_DIR/create-db.sh" "$DBNAME" "$TRACES_DIR"
 
 # STEP 3: Generate the airtraffic files
 mkdir -p "$WORK_DIR"
@@ -100,13 +114,21 @@ MASTER_NODE="$(sed -n -e '1s/ .*//p' "$WORK_DIR/nodefile")"
 # STEP 4: Create and load the database
 srun -l "$SCRIPTS_DIR/prepare-data.sh" "$WORK_DIR"
 
+if [ -n "$TRACES_DIR" ]; then
+        srun -l monetdb profilerstart "$DBNAME"
+fi
+
 echo '==================================='
 
 #srun -N1 -n1 --pty bash
 srun -n1 -N1 -w "$MASTER_NODE" -D "$WORK_DIR" \
-     ./bench.py "$DBNAME" --name "$EXPERIMENT" --duration "$DURATION" --max-queries 10000
+     ./bench.py "$DBNAME" --name "$EXPERIMENT" --duration "$DURATION" --repeat "$REPEAT"
 
 echo '==================================='
+
+if [ -n "$TRACES_DIR" ]; then
+        srun -l monetdb profilerstop "$DBNAME"
+fi
 
 if [ "$DROP_AFTER" = "yes" ]; then
 	srun -l -D "$WORK_DIR" monetdb stop "$DBNAME"
