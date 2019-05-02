@@ -37,7 +37,7 @@ def qq(s):
 def main(args):
     config = args.name or args.db
     deadline = time.time() + (args.duration or float("inf"))
-    max_queries = args.max_queries or float("inf")
+    repeat = args.repeat or float("inf")
 
     outfilename = config + ".csv"
     if args.output:
@@ -57,7 +57,7 @@ def main(args):
             seq = int(last.split(',')[1])
     write = writer(outfilename, not args.silent)
 
-    queries = glob.glob('sql/q??.sql')
+    queries = sorted(glob.glob('sql/q??.sql'))
     if not queries:
 	raise Issue("No queries found")
 
@@ -67,17 +67,17 @@ def main(args):
         write("config,seqno,query,duration")
     count = 0
     done = False
-    while not done:
-        rnd.shuffle(queries)   # in-place, ew!
+    while repeat == 0 or count < repeat:
+        count += 1
         for q in queries:
-            if time.time() >= deadline or count >= max_queries:
+            if time.time() >= deadline:
                 done = True
                 break
             seq += 1
-            count += 1
             duration = run(args.db, q)
             name = os.path.splitext(os.path.basename(q))[0]
             write("%s,%d,%s,%f", qq(config), seq, qq(name), duration)
+        rnd.shuffle(queries)   # in-place
 
     return 0
 
@@ -108,8 +108,8 @@ parser.add_argument('--name', '-n',
                     help='Config name, used to label the results, defaults to database name')
 parser.add_argument('--duration', '-d', type=int,
                     help='After this many seconds no new queries are started')
-parser.add_argument('--max-queries', '-N', type=int,
-                    help='Max number of queries to execute before exiting')
+parser.add_argument('--repeat', '-N', type=int,
+                    help='Number of time to repeat each query, 0 to repeat indefinitely')
 parser.add_argument('--output', '-o',
                     help='File or directory to write output to, defaults to ./<CONFIG>.csv')
 parser.add_argument('--silent', action='store_true',
