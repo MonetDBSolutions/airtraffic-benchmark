@@ -259,11 +259,18 @@ def generate_inserts(f, conf):
 	print >>f, "DELETE FROM \"%s\";" % table_name
 	print >>f
 
+	print >>f, "START TRANSACTION;"
+	print >>f
+
 	for fragment in conf.partition:
 		print >>f, "COPY %d OFFSET 2 RECORDS INTO \"%s\"" % (fragment.lines - 1, table_name)
 		print >>f, "FROM '@DOWNLOAD_DIR@/%s'" % fragment.load_file
 		print >>f, "USING DELIMITERS ',','\\n','\"';"
 		print >>f
 
+	print >>f, "COMMIT;"
+	print >>f
+
 	print >>f, "ALTER TABLE \"%s\" SET READ ONLY;" % table_name
 	print >>f, "ANALYZE atraf.\"%s\";" % table_name
+
