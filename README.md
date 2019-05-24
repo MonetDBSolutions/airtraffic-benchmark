@@ -9,7 +9,9 @@ Bla bla explanation Air Traffic.
 How to set up the benchmark
 ---------------------------
 
-Note: many of these steps can be [automated with Ansible](ansible.md).
+Note: many of these steps can be [automated with Ansible](ansible.md). There is
+also a [separate page](slurm/README.md) with information and helper scripts for
+running the benchmark on a Slurm cluster.
 
 First make sure MonetDB is installed and running on all nodes
 and that a database has been created on each of them.
@@ -107,7 +109,7 @@ This saves disk space but is slower because the Makefile tries to run
 multiple `xz -d` processes in parallel.
 
 If the target system has no lzma support or is very slow you can also
-pass `--compression gz` to load gzip compressed data instead.  This 
+pass `--compression gz` to load gzip compressed data instead.  This
 is a larger download but faster to decompress.
 
 Download location

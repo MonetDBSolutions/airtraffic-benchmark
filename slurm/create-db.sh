@@ -1,6 +1,6 @@
 #!/bin/bash
 
-: "${1?Usage: create-db.sh DBNAME}"
+: "${1?Usage: create-db.sh DBNAME [TRACES_DIR]}"
 TRACES_DIR="$2"
 
 
