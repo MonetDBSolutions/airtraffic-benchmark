@@ -430,8 +430,8 @@ def main(argv0, args):
 	config.subsetdir = os.path.abspath(os.path.join(config.basedir, 'subsets', args.subset))
 	config.sqldir = os.path.abspath(os.path.join(config.basedir, 'sql'))
 	config.outputdir = os.path.abspath(args.outputdir)  # not relative to basedir
-	config.compression = args.compression
 	config.load_compressed = args.load_compressed
+	config.compression = args.compression or ('gz' if config.load_compressed else 'xz')
 	config.data_location = args.data_location
 	config.premade_location = args.premade_location
 	config.download_dir = args.download_dir
@@ -465,12 +465,15 @@ parser.add_argument('nodefile', help='Node file, see README')
 parser.add_argument('subset', help='data set to use, for example `3mo` or `2yr`')
 parser.add_argument('outputdir', help='where to write the generated files')
 parser.add_argument('--compression', help='use this to download .gz data instead of .xz',
-	choices=('gz', 'xz'),
-	default='xz'
+	choices=('gz', 'xz')
+)
+parser.add_argument('--decompress-first', help='decompress downloaded files first',
+	action='store_false', dest='load_compressed'
 )
 parser.add_argument('--load-compressed', help='do not decompress downloaded files first',
-	action='store_true'
+	action='store_true', dest='load_compressed'
 )
+parser.set_defaults(load_compressed=True)
 parser.add_argument('--data-location', help='http- or rsync location of the data files',
 	default='https://s3.eu-central-1.amazonaws.com/atraf/atraf-data'
 )
