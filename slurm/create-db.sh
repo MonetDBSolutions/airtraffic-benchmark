@@ -22,3 +22,4 @@ if monetdb create "$1" 2>/dev/null; then
                 monetdb set mal_for_all=yes "$1"
         fi
 fi
+monetdb start "$1"
