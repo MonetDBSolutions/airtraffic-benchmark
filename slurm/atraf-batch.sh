@@ -115,20 +115,26 @@ MASTER_NODE="$(sed -n -e '1s/ .*//p' "$WORK_DIR/nodefile")"
 srun -l "$SCRIPTS_DIR/prepare-data.sh" "$WORK_DIR"
 
 if [ -n "$TRACES_DIR" ]; then
-        srun -l monetdb profilerstart "$DBNAME"
+	srun -l "$SCRIPTS_DIR/start-stethoscope.sh" "$DBNAME" "$TRACES_DIR" &
+	TRACER_PID=$!
+	sleep 3
+else
+	TRACER_PID=""
 fi
+	
 
 echo '==================================='
 
 #srun -N1 -n1 --pty bash
 srun -n1 -N1 -w "$MASTER_NODE" -D "$WORK_DIR" \
      ./bench.py "$DBNAME" --name "$EXPERIMENT" --duration "$DURATION" --repeat "$REPEAT"
+#sleep 3600
 
 echo '==================================='
 
 if [ -n "$TRACES_DIR" ]; then
-	# sometimes it fails, don't care why
-        srun -l monetdb profilerstop "$DBNAME" || true whatever
+	kill $TRACER_PID
+	sleep 2
 fi
 
 if [ "$DROP_AFTER" = "yes" ]; then
@@ -137,6 +143,7 @@ if [ "$DROP_AFTER" = "yes" ]; then
 fi
 
 srun -l "$SCRIPTS_DIR/stop-farm.sh" "$FARM_DIR"
+
 wait $FARM_PID
 
 echo DONE

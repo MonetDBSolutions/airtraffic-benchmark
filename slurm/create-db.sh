@@ -17,9 +17,6 @@ if monetdb create "$1" 2>/dev/null; then
                 T="$TRACES_DIR/$(hostname)"
                 rm -rf "$T"
                 mkdir -p "$T"
-                monetdb set profilerlogpath="$T" "$1"
-                monetdb set profilerbeatfreq=50 "$1"
-                monetdb set mal_for_all=yes "$1"
         fi
 fi
 monetdb start "$1"
