@@ -359,6 +359,15 @@ def write_makefile(writer, config):
 		print >>f, "\t$(MCLIENT_PREFIX)mclient -f csv -d $(DB_URL) sql/%s.sql >output/%s.csv" % (q, q)
 		print >>f, "\tcmp answers/%s.csv output/%s.csv" % (q, q)
 
+	print >>f
+	print >>f, "validated: ",
+	for q in sorted(config.queries.keys()):
+		print >>f, "\\\n\t%s.ok" % q,
+	print >>f
+	print >>f, "%.ok:"
+	print >>f, "\tmake validate-$(@:.ok=)"
+	print >>f, "\ttouch $@"
+
 	plans = [("%s.plan" % q, "sql/plan_%s.sql" % q, q) for q in sorted(config.queries.keys())]
 	print >>f
 	print >>f, "plan:",
