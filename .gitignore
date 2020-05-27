@@ -4,3 +4,6 @@ gen/
 
 *.pyc
 .*.swp
+
+# for start.sh
+/FARM/
