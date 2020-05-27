@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 
 import argparse
 import glob
@@ -23,8 +23,8 @@ def writer(outfilename, also_stdout):
     def write(fmt, *args):
         line = fmt % args
         if also_stdout:
-            print line
-        print >>outfile, line
+            print(line)
+        print(line, file=outfile)
         outfile.flush()
 
     return write
@@ -87,8 +87,8 @@ def run(db, queryfile):
     try:
         p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         (_, err) = p.communicate()
-    except subprocess.CalledProcessError, e:
-        print >>sys.stderr, "Query %s triggered an exception:" % queryfile
+    except subprocess.CalledProcessError as e:
+        print("Query %s triggered an exception:" % queryfile, file=sys.stderr)
         raise e
     
     # Look for something like this: clk:1297.253 ms
@@ -121,6 +121,6 @@ if __name__ == "__main__":
         args = parser.parse_args()
         status = main(args)
         sys.exit(status or 0)
-    except Issue, e:
-        print >>sys.stderr, "An error occurred:", e.msg
+    except Issue as e:
+        print("An error occurred:", e.msg, file=sys.stderr)
         sys.exit(1)

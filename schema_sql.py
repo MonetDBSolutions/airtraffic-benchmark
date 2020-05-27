@@ -174,77 +174,77 @@ ORDER BY "Year", "Month"
 
 def generate_local_schema(f, conf):
 	global BEFORE, AFTER
-	print >>f, BEFORE
+	print(BEFORE, file=f)
 
 	if conf.distributed:
 		tmp_data = "tmp_node%d" % conf.nodenum
-		print >>f, "CREATE REPLICA TABLE tmp (LIKE tmp_template);"
-		print >>f, "CREATE TABLE \"%s\" (LIKE tmp_template);" % tmp_data
-		print >>f, "ALTER TABLE tmp ADD TABLE \"%s\";" % tmp_data
-		print >>f, "-- The other parts of the replica table will be added later"
+		print("CREATE REPLICA TABLE tmp (LIKE tmp_template);", file=f)
+		print(f"CREATE TABLE \"{tmp_data}\" (LIKE tmp_template);", file=f)
+		print(f"ALTER TABLE tmp ADD TABLE \"{tmp_data}\";", file=f)
+		print("-- The other parts of the replica table will be added later", file=f)
 	else:
 		tmp_data = "tmp"
-		print >>f, "CREATE TABLE tmp (LIKE tmp_template);"
-	print >>f, ""
+		print("CREATE TABLE tmp (LIKE tmp_template);", file=f)
+	print("", file=f)
 
-	print >>f, "INSERT INTO \"%s\" (\"Hour\")" % tmp_data
-	print >>f, "VALUES"
-	print >>f, "    (0), (1), (2), (3), (4), (5), "
-	print >>f, "    (6), (7), (8), (9), (10), (11), "
-	print >>f, "    (12), (13), (14), (15), (16), (17), "
-	print >>f, "    (18), (19), (20), (21), (22), (23);"
-	print >>f, ""
+	print(f"INSERT INTO \"{tmp_data}\" (\"Hour\")", file=f)
+	print("VALUES", file=f)
+	print("    (0), (1), (2), (3), (4), (5), ", file=f)
+	print("    (6), (7), (8), (9), (10), (11), ", file=f)
+	print("    (12), (13), (14), (15), (16), (17), ", file=f)
+	print("    (18), (19), (20), (21), (22), (23);", file=f)
+	print("", file=f)
 
 	if conf.distributed:
-		print >>f, "CREATE MERGE TABLE ontime (LIKE ontime_template);"
-		print >>f, "CREATE TABLE \"ontime_node%d\" (LIKE ontime_template);" % conf.nodenum
-		print >>f, "ALTER TABLE ontime ADD TABLE \"ontime_node%d\";" % conf.nodenum
+		print("CREATE MERGE TABLE ontime (LIKE ontime_template);", file=f)
+		print("CREATE TABLE \"ontime_node%d\" (LIKE ontime_template);" % conf.nodenum, file=f)
+		print("ALTER TABLE ontime ADD TABLE \"ontime_node%d\";" % conf.nodenum, file=f)
 	else:
-		print >>f, "CREATE TABLE ontime (LIKE ontime_template);"
-	print >>f, ""
+		print("CREATE TABLE ontime (LIKE ontime_template);", file=f)
+	print("", file=f)
 
-	print >>f, "-- Used to check if COPY INTO BEST EFFORT lost any rows"
-	print >>f, "CREATE TABLE expected_rows ( \"Year\" INT, \"Month\" INT, \"Rows\" INT );"
-	all_parts = [part for _host, parts in conf.partitions.items() for part in parts]
+	print("-- Used to check if COPY INTO BEST EFFORT lost any rows", file=f)
+	print("CREATE TABLE expected_rows ( \"Year\" INT, \"Month\" INT, \"Rows\" INT );", file=f)
+	all_parts = [part for _host, parts in list(conf.partitions.items()) for part in parts]
 	all_parts = sorted(all_parts, key=lambda p: (p.year, p.month))
 	if all_parts:
-		print >>f, "INSERT INTO expected_rows(\"Year\", \"Month\", \"Rows\") VALUES"
+		print("INSERT INTO expected_rows(\"Year\", \"Month\", \"Rows\") VALUES", file=f)
 		for part in all_parts:
 			end = "," if part != all_parts[-1] else ";"
-			print >>f, "        (%d, %d, %d)%s" % (part.year, part.month, part.lines - 1, end)
-	print >>f, ""
+			print("        (%d, %d, %d)%s" % (part.year, part.month, part.lines - 1, end), file=f)
+	print("", file=f)
 
-	print >>f, AFTER
+	print(AFTER, file=f)
 
 
 def generate_remote_schema(f, conf):
-	print >>f, "SET SCHEMA atraf;"
-	print >>f, ""
+	print("SET SCHEMA atraf;", file=f)
+	print("", file=f)
 
 	if not conf.distributed:
 		return
 
 	for i, node in enumerate(conf.nodes):
 		if node != conf.node:
-			print >>f, "CREATE REMOTE TABLE \"tmp_node%d\" (LIKE tmp_template)" % i,
-			print >>f, "ON '%s';" % conf.urls[node]
-			print >>f, "ALTER TABLE tmp ADD TABLE \"tmp_node%d\";" % i
-		print >>f, ""
+			print("CREATE REMOTE TABLE \"tmp_node%d\" (LIKE tmp_template)" % i, end=' ', file=f)
+			print(f"ON '{conf.urls[node]}';", file=f)
+			print("ALTER TABLE tmp ADD TABLE \"tmp_node%d\";" % i, file=f)
+		print("", file=f)
 
 	for i, node in enumerate(conf.nodes):
 		if not conf.partitions[node]:
 			continue
 		if node != conf.node:
-			print >>f, "CREATE REMOTE TABLE \"ontime_node%d\" ( LIKE \"ontime_template\" ) " % i
-			print >>f, "    ON '%s';" % conf.urls[node]
-			print >>f, "ALTER TABLE \"ontime\" ADD TABLE \"ontime_node%d\";" % i
-	print >>f, ""
+			print("CREATE REMOTE TABLE \"ontime_node%d\" ( LIKE \"ontime_template\" ) " % i, file=f)
+			print(f"    ON '{conf.urls[node]}';", file=f)
+			print("ALTER TABLE \"ontime\" ADD TABLE \"ontime_node%d\";" % i, file=f)
+	print("", file=f)
 
 
 
 def generate_inserts(f, conf):
-	print >>f, "SET SCHEMA atraf;"
-	print >>f, ""
+	print("SET SCHEMA atraf;", file=f)
+	print("", file=f)
 
 	if conf.distributed:
 		table_name = "ontime_node%d" % conf.nodenum
@@ -256,21 +256,21 @@ def generate_inserts(f, conf):
 	if not table_exists:
 		return
 
-	print >>f, "DELETE FROM \"%s\";" % table_name
-	print >>f
+	print(f"DELETE FROM \"{table_name}\";", file=f)
+	print(file=f)
 
-	print >>f, "START TRANSACTION;"
-	print >>f
+	print("START TRANSACTION;", file=f)
+	print(file=f)
 
 	for fragment in conf.partition:
-		print >>f, "COPY %d OFFSET 2 RECORDS INTO \"%s\"" % (fragment.lines - 1, table_name)
-		print >>f, "FROM '@DOWNLOAD_DIR@/%s'" % fragment.load_file
-		print >>f, "USING DELIMITERS ',','\\n','\"';"
-		print >>f
+		print(f"COPY {fragment.lines - 1} OFFSET 2 RECORDS INTO \"{table_name}\"", file=f)
+		print(f"FROM '@DOWNLOAD_DIR@/{fragment.load_file}'", file=f)
+		print("USING DELIMITERS ',','\\n','\"';", file=f)
+		print(file=f)
 
-	print >>f, "COMMIT;"
-	print >>f
+	print("COMMIT;", file=f)
+	print(file=f)
 
-	print >>f, "ALTER TABLE \"%s\" SET READ ONLY;" % table_name
-	print >>f, "ANALYZE atraf.\"%s\";" % table_name
+	print(f"ALTER TABLE \"{table_name}\" SET READ ONLY;", file=f)
+	print(f"ANALYZE atraf.\"{table_name}\";", file=f)
 

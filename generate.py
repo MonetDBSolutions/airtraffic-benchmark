@@ -1,9 +1,9 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 
 import argparse
 import glob
 import os
-import StringIO
+import io
 import re
 import sys
 
@@ -18,9 +18,9 @@ class FileWriter:
 		self.basedir = basedir
 		self.files = {}
 		self.executable = {}
-	
+
 	def open(self, path, executable=False):
-		sio = StringIO.StringIO()
+		sio = io.StringIO()
 		self.files[path] = sio
 		self.executable[path] = executable
 		return sio
@@ -35,7 +35,7 @@ class FileWriter:
 			new_contents = sio.getvalue()
 			modified = False # so far
 			if new_contents != old_contents:
-				print "Writing %s" % path
+				print(f"Writing {path}")
 				d = os.path.dirname(p)
 				if not os.path.isdir(d):
 					os.makedirs(d)
@@ -53,7 +53,7 @@ class FileWriter:
 				written_files += 1
 			else:
 				unchanged_files += 1
-		print "Wrote %d files, left %d unchanged" % (written_files, unchanged_files)
+		print("Wrote %d files, left %d unchanged" % (written_files, unchanged_files))
 
 
 class Config(object):
@@ -93,7 +93,8 @@ class Config(object):
 
 	def dump(self):
 		for a in self.__slots__:
-			print "%s = %r" % (a, getattr(self, a, None))
+			v = getattr(self, a, None)
+			print(f"{a} = {v!r}")
 
 	def for_node(self, node):
 		return NodeConfig(self, node)
@@ -114,10 +115,10 @@ class NodeConfig(Config):
 			if hasattr(config, a):
 				setattr(self, a, getattr(config, a))
 		self.node = node
-                self.nodenum = config.nodes.index(node)
+		self.nodenum = config.nodes.index(node)
 		self.url = config.urls[node]
 		self.partition = config.partitions[node][:]
-		self.node_suffix = "" if not config.distributed else "_%s" % self.node
+		self.node_suffix = "" if not config.distributed else "_" + self.node
 		self.premade = "%s_%dx_%d" % (
 			config.subset,
 			len(config.nodes),
@@ -141,7 +142,7 @@ class Part:
 		return getattr(self, i)
 
 	def __repr__(self):
-		return "Part(load_file='%s')" % self.load_file
+		return f"Part(load_file='{self.load_file}')"
 
 
 
@@ -159,14 +160,14 @@ def read_nodefile(path, config):
 		if not n or not u:
 			raise ErrMsg("Error on line %d of %s" % (lineno, path))
 		if n in config.urls:
-			raise ErrMsg("Duplicate node name %s in %s" % (n, path))
+			raise ErrMsg(f"Duplicate node name {n} in {path}")
 		if not d or d == 'data':
 			has_data = True
 		elif d == 'nodata':
 			has_data = False
 		else:
 			raise ErrMsg("Third argument on line %d must be either 'data' or 'nodata'" % lineno)
-			
+
 		config.nodes.append(n)
 		config.urls[n] = u
 		config.partitions[n] = []
@@ -208,210 +209,210 @@ def partition(config):
 def write_makefile(writer, config):
 	f = writer.open('Makefile')
 
-	print >>f, "# Generated file, do not edit"
-	print >>f
-	print >>f, "DATA_LOCATION = %(data_location)s" % config
-	print >>f, "PREMADE_LOCATION = %(premade_location)s" % config
-	print >>f, "DOWNLOAD_DIR = %(download_dir)s" % config
-	print >>f
-	print >>f, "# Will be invoked as $(FETCH) TARGET_FILE SOURCE_URL"
+	print("# Generated file, do not edit", file=f)
+	print(file=f)
+	print(f"DATA_LOCATION = {config['data_location']}", file=f)
+	print(f"PREMADE_LOCATION = {config['premade_location']}", file=f)
+	print(f"DOWNLOAD_DIR = {config['download_dir']}", file=f)
+	print(file=f)
+	print("# Will be invoked as $(FETCH) TARGET_FILE SOURCE_URL", file=f)
 	if config.data_location.startswith('rsync'):
-		print >>f, 'FETCH = swapargs() { X="$$1"; shift; Y="$$1"; shift; rsync "$$Y" "$$X" "$$@"; }; swapargs'
-        elif config.use_curl:
-		print >>f, "FETCH = curl -s -o"
-		print >>f, "# Alternative: wget -q -O"
+		print('FETCH = swapargs() { X="$$1"; shift; Y="$$1"; shift; rsync "$$Y" "$$X" "$$@"; }; swapargs', file=f)
+	elif config.use_curl:
+		print("FETCH = curl -s -o", file=f)
+		print("# Alternative: wget -q -O", file=f)
 	else:
-		print >>f, "FETCH = wget -q -O"
-		print >>f, "# Alternative: curl -s -o"
-	print >>f
-	print >>f, "NODENAME := $(shell hostname -s)"
-	print >>f, "DB_URL=$(DB_URL_$(NODENAME))"
+		print("FETCH = wget -q -O", file=f)
+		print("# Alternative: curl -s -o", file=f)
+	print(file=f)
+	print("NODENAME := $(shell hostname -s)", file=f)
+	print("DB_URL=$(DB_URL_$(NODENAME))", file=f)
 	for n in config.nodes:
 		c = config.for_node(n)
-		print >>f, "DB_URL_%(node)s=%(url)s" % c
+		print(f"DB_URL_{c['node']}={c['url']}", file=f)
 
-	print >>f
-	print >>f, "default:"
-	print >>f, "\t@echo This is node $(NODENAME) with url $(DB_URL)"
-	print >>f
+	print(file=f)
+	print("default:", file=f)
+	print("\t@echo This is node $(NODENAME) with url $(DB_URL)", file=f)
+	print(file=f)
 
-	print >>f, "ping: ping-$(NODENAME)"
-	print >>f, "ping-all:"," ".join("ping-%s" % n for n in config.nodes)
+	print("ping: ping-$(NODENAME)", file=f)
+	print("ping-all:", " ".join("ping-%s" % n for n in config.nodes), file=f)
 	for n in config.nodes:
 		c = config.for_node(n)
-		print >>f, "ping-%(node)s:" % c
-		print >>f, "\t$(MCLIENT_PREFIX)mclient -d %(url)s -ftab -s 'select id from sys.tables where false'" % c
-	print >>f
+		print(f"ping-{c['node']}:", file=f)
+		print(f"\t$(MCLIENT_PREFIX)mclient -d {c['url']} -ftab -s 'select id from sys.tables where false'", file=f)
+	print(file=f)
 
-	print >>f, "download: download-$(NODENAME)"
-	print >>f, "download-all:"," ".join("download-%s" % n for n in config.nodes if config.for_node(n).partition)
+	print("download: download-$(NODENAME)", file=f)
+	print("download-all:", " ".join("download-%s" % n for n in config.nodes if config.for_node(n).partition), file=f)
 	for n in config.nodes:
 		c = config.for_node(n)
-		print >>f, "download-%(node)s:" % c,
+		print(f"download-{c['node']}:", end=' ', file=f)
 		for p in sorted(set(p.load_file for p in c.partition)):
-			print >>f, "\\\n\t\t$(DOWNLOAD_DIR)/%s" % p,
-		print >>f, ""
-	print >>f
+			print(f"\\\n\t\t$(DOWNLOAD_DIR)/{p}", end=' ', file=f)
+		print("", file=f)
+	print(file=f)
 	seen = set() # instances of Part are unequal even if they're equal
 	for p in config.parts:
 		if p.fetch_file in seen:
 		    continue
 		seen.add(p.fetch_file)
 		if p.load_file != p.fetch_file:
-			print >>f, "$(DOWNLOAD_DIR)/%(load_file)s: $(DOWNLOAD_DIR)/%(fetch_file)s" % p
+			print(f"$(DOWNLOAD_DIR)/{p['load_file']}: $(DOWNLOAD_DIR)/{p['fetch_file']}", file=f)
 			if p.fetch_file.endswith('.xz'):
-				print >>f, "\txz -d <$^ >$@.tmp"
+				print("\txz -d <$^ >$@.tmp", file=f)
 			elif p.fetch_file.endswith('gz'):
-				print >>f, "\tgzip -d <$^ >$@.tmp"
+				print("\tgzip -d <$^ >$@.tmp", file=f)
 			else:
-				raise ErrMsg("Don't know how to decompress %s" % p.fetch_file)
-			print >>f, "\tmv $@.tmp $@"
-		print >>f, "$(DOWNLOAD_DIR)/%(fetch_file)s: $(DOWNLOAD_DIR)/.dir" % p
-		print >>f, "\t$(FETCH) $@.tmp $(DATA_LOCATION)/%(fetch_file)s" % p
-		print >>f, "\tmv $@.tmp $@"
-	print >>f
+				raise ErrMsg(f"Don't know how to decompress {p.fetch_file}")
+			print("\tmv $@.tmp $@", file=f)
+		print(f"$(DOWNLOAD_DIR)/{p['fetch_file']}: $(DOWNLOAD_DIR)/.dir", file=f)
+		print(f"\t$(FETCH) $@.tmp $(DATA_LOCATION)/{p['fetch_file']}", file=f)
+		print("\tmv $@.tmp $@", file=f)
+	print(file=f)
 
-	print >>f, "download-premade: download-premade-$(NODENAME)"
-	print >>f, "download-premade-all:", " ".join("download-premade-%s" % n for n in config.nodes)
+	print("download-premade: download-premade-$(NODENAME)", file=f)
+	print("download-premade-all:", " ".join("download-premade-%s" % n for n in config.nodes), file=f)
 	for n in config.nodes:
-		print >>f, "download-premade-%s: $(DOWNLOAD_DIR)/%s" % (n, config.for_node(n).premade_archive_name)
-	print >>f
+		print(f"download-premade-{n}: $(DOWNLOAD_DIR)/{config.for_node(n).premade_archive_name}", file=f)
+	print(file=f)
 	for n in config.nodes:
 		archive = config.for_node(n).premade_archive_name
-		print >>f, "$(DOWNLOAD_DIR)/%s: $(DOWNLOAD_DIR)/.dir" % archive
-		print >>f, "\t$(FETCH) $@.tmp $(PREMADE_LOCATION)/%s" % archive
-		print >>f, "\tmv $@.tmp $@"
-	print >>f
+		print(f"$(DOWNLOAD_DIR)/{archive}: $(DOWNLOAD_DIR)/.dir", file=f)
+		print(f"\t$(FETCH) $@.tmp $(PREMADE_LOCATION)/{archive}", file=f)
+		print("\tmv $@.tmp $@", file=f)
+	print(file=f)
 
-	print >>f, "# The downloaded files have a dependency on this file."
-	print >>f, "# To avoid redownloading them we set the timestamp far in the past"
-	print >>f, "$(DOWNLOAD_DIR)/.dir:"
-	print >>f, "\tmkdir -p $(DOWNLOAD_DIR)"
-	print >>f, "\ttouch -t 198510260124 $@"
-	print >>f
+	print("# The downloaded files have a dependency on this file.", file=f)
+	print("# To avoid redownloading them we set the timestamp far in the past", file=f)
+	print("$(DOWNLOAD_DIR)/.dir:", file=f)
+	print("\tmkdir -p $(DOWNLOAD_DIR)", file=f)
+	print("\ttouch -t 198510260124 $@", file=f)
+	print(file=f)
 
-	print >>f, "schema: schema-$(NODENAME)"
-	print >>f, "schema-all:", " ".join("schema-%s" % n for n in config.nodes)
+	print("schema: schema-$(NODENAME)", file=f)
+	print("schema-all:", " ".join("schema-%s" % n for n in config.nodes), file=f)
 	for n in config.nodes:
 		c = config.for_node(n)
-		print >>f, "schema-%s: schema-local-%s schema-remote-%s" % (n, n, n)
-	print >>f
+		print(f"schema-{n}: schema-local-{n} schema-remote-{n}", file=f)
+	print(file=f)
 
-	print >>f, "schema-local: schema-local-$(NODENAME)"
-	print >>f, "schema-local-all:", " ".join("schema-local-%s" % n for n in config.nodes)
+	print("schema-local: schema-local-$(NODENAME)", file=f)
+	print("schema-local-all:", " ".join("schema-local-%s" % n for n in config.nodes), file=f)
 	for n in config.nodes:
 		c = config.for_node(n)
-		print >>f, "schema-local-%s:" % n
-		print >>f, "\t$(MCLIENT_PREFIX)mclient -d %(url)s schema-local-%(node)s.sql " % c
-	print >>f
+		print(f"schema-local-{n}:", file=f)
+		print(f"\t$(MCLIENT_PREFIX)mclient -d {c['url']} schema-local-{c['node']}.sql ", file=f)
+	print(file=f)
 
-	print >>f, "schema-remote: schema-remote-$(NODENAME)"
-	print >>f, "schema-remote-all:", " ".join("schema-remote-%s" % n for n in config.nodes)
+	print("schema-remote: schema-remote-$(NODENAME)", file=f)
+	print("schema-remote-all:", " ".join("schema-remote-%s" % n for n in config.nodes), file=f)
 	for n in config.nodes:
 		c = config.for_node(n)
-		print >>f, "schema-remote-%s:" % n
-		print >>f, "\t$(MCLIENT_PREFIX)mclient -d %(url)s schema-remote-%(node)s.sql " % c
-	print >>f
+		print(f"schema-remote-{n}:", file=f)
+		print(f"\t$(MCLIENT_PREFIX)mclient -d {c['url']} schema-remote-{c['node']}.sql ", file=f)
+	print(file=f)
 
-	print >>f, "drop: drop-$(NODENAME)"
-	print >>f, "drop-all:"," ".join("drop-%s" % n for n in config.nodes)
+	print("drop: drop-$(NODENAME)", file=f)
+	print("drop-all:", " ".join("drop-%s" % n for n in config.nodes), file=f)
 	for n in config.nodes:
 		c = config.for_node(n)
-		print >>f, "drop-%s:" % n
-		print >>f, "\t$(MCLIENT_PREFIX)mclient -d %(url)s -s 'DROP SCHEMA IF EXISTS atraf CASCADE' " % c
-	print >>f
+		print(f"drop-{n}:", file=f)
+		print(f"\t$(MCLIENT_PREFIX)mclient -d {c['url']} -s 'DROP SCHEMA IF EXISTS atraf CASCADE' ", file=f)
+	print(file=f)
 
-	print >>f, "insert: insert-$(NODENAME)"
-	print >>f, "insert-all:"," ".join("insert-%s" % n for n in config.nodes)
+	print("insert: insert-$(NODENAME)", file=f)
+	print("insert-all:", " ".join("insert-%s" % n for n in config.nodes), file=f)
 	for n in config.nodes:
 		c = config.for_node(n)
-		print >>f, "insert-%s:" % n
-		print >>f, "\t<insert-%(node)s.sql sed -e 's,@DOWNLOAD_DIR@,$(abspath $(DOWNLOAD_DIR)),' | $(MCLIENT_PREFIX)mclient -d %(url)s" % c
-	print >>f
+		print(f"insert-{n}:", file=f)
+		print(f"\t<insert-{c['node']}.sql sed -e 's,@DOWNLOAD_DIR@,$(abspath $(DOWNLOAD_DIR)),' | $(MCLIENT_PREFIX)mclient -d {c['url']}", file=f)
+	print(file=f)
 
-	print >>f, "unpack-premade: unpack-premade-$(NODENAME)"
-	print >>f, "unpack-premade-all:"," ".join("unpack-premade-%s" % n for n in config.nodes)
+	print("unpack-premade: unpack-premade-$(NODENAME)", file=f)
+	print("unpack-premade-all:", " ".join("unpack-premade-%s" % n for n in config.nodes), file=f)
 	for n in config.nodes:
 		c = config.for_node(n)
 		destname = c.url[c.url.rindex('/') + 1:]
-		print >>f, "unpack-premade-%s:" % n
-		print >>f, "\ttest -d '$(DBFARM_DIR)' # please set DBFARM_DIR from the command line"
-		print >>f, "\tmkdir '$(DBFARM_DIR)/%s' # should not exist yet" % destname
-		print >>f, "\t%s -d < '$(DOWNLOAD_DIR)/%s' | tar -x -f- -C '$(DBFARM_DIR)/%s' --strip-components=1" % (
+		print(f"unpack-premade-{n}:", file=f)
+		print("\ttest -d '$(DBFARM_DIR)' # please set DBFARM_DIR from the command line", file=f)
+		print(f"\tmkdir '$(DBFARM_DIR)/{destname}' # should not exist yet", file=f)
+		print("\t%s -d < '$(DOWNLOAD_DIR)/%s' | tar -x -f- -C '$(DBFARM_DIR)/%s' --strip-components=1" % (
 			config.compression, 
 			c.premade_archive_name, 
-			destname)
-	print >>f
+			destname), file=f)
+	print(file=f)
 
-	print >>f, "validate: validate-rowcount",
+	print("validate: validate-rowcount", end=' ', file=f)
 	for q in sorted(config.queries.keys()):
-		print >>f, "\\\n\t\tvalidate-%s" % q,
-	print >>f
+		print(f"\\\n\t\tvalidate-{q}", end=' ', file=f)
+	print(file=f)
 
-	print >>f
-	print >>f, "validate-rowcount:"
-	print >>f, "\tmkdir -p output"
-	print >>f, "\t$(MCLIENT_PREFIX)mclient -f csv -d $(DB_URL) -s 'SELECT \"Year\", \"Month\", COUNT(*) AS \"Rows\" FROM atraf.ontime GROUP BY \"Year\", \"Month\" ORDER BY \"Year\", \"Month\"' >output/rowcount.csv"
-	print >>f, "\tcmp answers/rowcount.csv output/rowcount.csv"
+	print(file=f)
+	print("validate-rowcount:", file=f)
+	print("\tmkdir -p output", file=f)
+	print("\t$(MCLIENT_PREFIX)mclient -f csv -d $(DB_URL) -s 'SELECT \"Year\", \"Month\", COUNT(*) AS \"Rows\" FROM atraf.ontime GROUP BY \"Year\", \"Month\" ORDER BY \"Year\", \"Month\"' >output/rowcount.csv", file=f)
+	print("\tcmp answers/rowcount.csv output/rowcount.csv", file=f)
 	for q in sorted(config.queries.keys()):
-		print >>f, "validate-%s:" % q
-		print >>f, "\tmkdir -p output"
-		print >>f, "\t$(MCLIENT_PREFIX)mclient -f csv -d $(DB_URL) sql/%s.sql >output/%s.csv" % (q, q)
-		print >>f, "\tcmp answers/%s.csv output/%s.csv" % (q, q)
+		print(f"validate-{q}:", file=f)
+		print("\tmkdir -p output", file=f)
+		print(f"\t$(MCLIENT_PREFIX)mclient -f csv -d $(DB_URL) sql/{q}.sql >output/{q}.csv", file=f)
+		print(f"\tcmp answers/{q}.csv output/{q}.csv", file=f)
 
-	print >>f
-	print >>f, "validated: ",
+	print(file=f)
+	print("validated: ", end=' ', file=f)
 	for q in sorted(config.queries.keys()):
-		print >>f, "\\\n\t%s.ok" % q,
-	print >>f
-	print >>f, "%.ok:"
-	print >>f, "\tmake validate-$(@:.ok=)"
-	print >>f, "\ttouch $@"
+		print(f"\\\n\t{q}.ok", end=' ', file=f)
+	print(file=f)
+	print("%.ok:", file=f)
+	print("\tmake validate-$(@:.ok=)", file=f)
+	print("\ttouch $@", file=f)
 
-	plans = [("%s.plan" % q, "sql/plan_%s.sql" % q, q) for q in sorted(config.queries.keys())]
-	print >>f
-	print >>f, "plan:",
+	plans = [(f"{q}.plan", f"sql/plan_{q}.sql", q) for q in sorted(config.queries.keys())]
+	print(file=f)
+	print("plan:", end=' ', file=f)
 	for p, _, _ in plans:
-		print >>f, "\\\n\t\t%s" % p,
-	print >>f
-	print >>f
+		print(f"\\\n\t\t{p}", end=' ', file=f)
+	print(file=f)
+	print(file=f)
 	for p, e, q in plans:
-		print >>f, "%s: sql/%s.sql" % (e, q)
-		print >>f, "\tsed -e '3s/^/PLAN /' <$< >$@.tmp"
-		print >>f, "\tmv $@.tmp $@"
+		print(f"{e}: sql/{q}.sql", file=f)
+		print("\tsed -e '3s/^/PLAN /' <$< >$@.tmp", file=f)
+		print("\tmv $@.tmp $@", file=f)
 
-	explains = [("%s.explain" % q, "sql/explain_%s.sql" % q, q) for q in sorted(config.queries.keys())]
-	print >>f
-	print >>f, "explain:",
+	explains = [(f"{q}.explain", f"sql/explain_{q}.sql", q) for q in sorted(config.queries.keys())]
+	print(file=f)
+	print("explain:", end=' ', file=f)
 	for p, _, _ in explains:
-		print >>f, "\\\n\t\t%s" % p,
-	print >>f
-	print >>f
+		print(f"\\\n\t\t{p}", end=' ', file=f)
+	print(file=f)
+	print(file=f)
 	for p, e, q in explains:
-		print >>f, "%s: sql/%s.sql" % (e, q)
-		print >>f, "\tsed -e '3s/^/EXPLAIN /' <$< >$@.tmp"
-		print >>f, "\tmv $@.tmp $@"
+		print(f"{e}: sql/{q}.sql", file=f)
+		print("\tsed -e '3s/^/EXPLAIN /' <$< >$@.tmp", file=f)
+		print("\tmv $@.tmp $@", file=f)
 
 	for p, e, q in plans + explains:
-		print >>f, "%s: %s" % (p, e)
-		print >>f, "\t$(MCLIENT_PREFIX)mclient -fraw -d $(DB_URL) $< >$@.tmp"
-		print >>f, "\tsed -e '/^%/d' <$@.tmp >$@"
-		print >>f, "\trm $@.tmp"
+		print(f"{p}: {e}", file=f)
+		print("\t$(MCLIENT_PREFIX)mclient -fraw -d $(DB_URL) $< >$@.tmp", file=f)
+		print("\tsed -e '/^%/d' <$@.tmp >$@", file=f)
+		print("\trm $@.tmp", file=f)
 
 
 def write_schema(writer, conf):
-	f = writer.open('schema-local-%(node)s.sql' % conf)
+	f = writer.open(f"schema-local-{conf['node']}.sql")
 	schema_sql.generate_local_schema(f, conf)
-	f = writer.open('schema-remote-%(node)s.sql' % conf)
+	f = writer.open(f"schema-remote-{conf['node']}.sql")
 	schema_sql.generate_remote_schema(f, conf)
 
 def write_inserts(writer, conf):
-	f = writer.open('insert-%(node)s.sql' % conf)
+	f = writer.open(f"insert-{conf['node']}.sql")
 	schema_sql.generate_inserts(f, conf)
 
 def write_sql(writer, config):
 	for name, query in sorted(config.queries.items()):
-		f = writer.open(os.path.join('sql/%s.sql' % name))
+		f = writer.open(os.path.join(f'sql/{name}.sql'))
 		f.write(query)
 
 def write_files_from_dir(writer, fromdir, todir):
@@ -423,10 +424,10 @@ def write_files_from_dir(writer, fromdir, todir):
 			f.write(contents)
 
 def write_bench_script(writer, config):
-    script = 'bench.py'
-    src = os.path.join(config.basedir, 'bench.py')
-    content = open(src).read()
-    writer.open(script, True).write(content)
+	script = 'bench.py'
+	src = os.path.join(config.basedir, 'bench.py')
+	content = open(src).read()
+	writer.open(script, True).write(content)
 
 def main(argv0, args):
 	"""Entry point"""
@@ -447,9 +448,9 @@ def main(argv0, args):
 	config.use_curl = args.use_curl
 
 	if not os.path.isfile(config.nodefile):
-		raise ErrMsg("Node file %s does not exist" % config.nodefile)
+		raise ErrMsg(f"Node file {config.nodefile} does not exist")
 	if not os.path.isdir(config.subsetdir):
-		raise ErrMsg("Subset directory %s does not exist" % config.subsetdir)
+		raise ErrMsg(f"Subset directory {config.subsetdir} does not exist")
 
 	read_nodefile(config.nodefile, config)
 	read_subset(config)
@@ -501,6 +502,6 @@ if __name__ == "__main__":
 		args = parser.parse_args()
 		status = main(sys.argv[0], args)
 		sys.exit(status or 0)
-	except ErrMsg, e:
-		print >>sys.stderr, e.message
+	except ErrMsg as e:
+		print(e.message, file=sys.stderr)
 		sys.exit(1)
