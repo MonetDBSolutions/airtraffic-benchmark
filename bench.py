@@ -59,7 +59,7 @@ def main(args):
 
     queries = sorted(glob.glob('sql/q??.sql'))
     if not queries:
-	raise Issue("No queries found")
+        raise Issue("No queries found")
 
     rnd = random.Random(0)
 
