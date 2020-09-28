@@ -13,16 +13,14 @@ if [ $# = 0 ]; then
 	exit 1
 fi
 
-
-killall -9 monetdbd mserver5 || true
-rm -rf "$FARM"
-mkdir "$FARM"
-touch "$FARM/pids"
+urls=()
+nodes=()
+ports=()
 
 for f in "$@"
 do
 	echo "Reading node file $f"
-	cat "$f" | while read node url datanodata
+	while read node url datanodata
 	do
 		tail="${url##*/}"
 		if [ "x$tail" != "x$node" ]; then
@@ -32,12 +30,34 @@ do
 		fi
 		tmp="${url%/*}"
 		port="${tmp##*:}"
-		echo "    starting $node on port $port (url $url)"
-		mserver5 \
-			--dbpath="$FARM/$node" \
-			--set mapi_port="$port" \
-			4>&1 >"$FARM/$node.log" \
-			&
-		echo "kill $!" >>"$FARM/pids"
-	done
+		urls+=("$url")
+		nodes+=($node)
+		ports+=($port)
+	done <"$f"
+done
+
+if fuser -n tcp "${ports[@]}" -k -9
+then
+	sleep 1
+fi
+
+#rm -rf "$FARM"
+#mkdir "$FARM"
+touch "$FARM/pids"
+
+for i in ${!nodes[*]}
+do
+	url="${urls[$i]}"
+	node="${nodes[$i]}"
+	port="${ports[$i]}"
+	#if fuser -n tcp $port -k 9; then
+	#	echo "Killed daemon on port $port"
+	#fi
+	echo "    starting $node on port $port (url $url)"
+	mserver5 \
+		--dbpath="$FARM/$node" \
+		--set mapi_port="$port" \
+		4>&1 >"$FARM/$node.log" \
+		&
+	echo "kill $!" >>"$FARM/pids"
 done
