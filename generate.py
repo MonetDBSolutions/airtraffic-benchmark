@@ -264,6 +264,8 @@ def write_makefile(writer, config):
 				print("\txz -d <$^ >$@.tmp", file=f)
 			elif p.fetch_file.endswith('gz'):
 				print("\tgzip -d <$^ >$@.tmp", file=f)
+			elif p.fetch_file.endswith('lz4'):
+				print("\tlz4 -d <$^ >$@.tmp", file=f)
 			else:
 				raise ErrMsg(f"Don't know how to decompress {p.fetch_file}")
 			print("\tmv $@.tmp $@", file=f)
@@ -327,7 +329,7 @@ def write_makefile(writer, config):
 	for n in config.nodes:
 		c = config.for_node(n)
 		print(f"insert-{n}:", file=f)
-		print(f"\t<insert-{c['node']}.sql sed -e 's,@DOWNLOAD_DIR@,$(abspath $(DOWNLOAD_DIR)),' | $(MCLIENT_PREFIX)mclient -d {c['url']}", file=f)
+		print(f"\t<insert-{c['node']}.sql sed -e 's,@DOWNLOAD_DIR@,$(abspath $(DOWNLOAD_DIR)),' | $(MCLIENT_PREFIX)mclient -t clock -e -d {c['url']}", file=f)
 	print(file=f)
 
 	print("unpack-premade: unpack-premade-$(NODENAME)", file=f)
@@ -475,7 +477,7 @@ parser.add_argument('nodefile', help='Node file, see README')
 parser.add_argument('subset', help='data set to use, for example `3mo` or `2yr`')
 parser.add_argument('outputdir', help='where to write the generated files')
 parser.add_argument('--compression', help='use this to download .gz data instead of .xz',
-	choices=('gz', 'xz')
+	choices=('gz', 'lz4', 'xz')
 )
 parser.add_argument('--decompress-first', help='decompress downloaded files first',
 	action='store_false', dest='load_compressed'
