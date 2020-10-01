@@ -76,6 +76,7 @@ class Config(object):
 		'load_compressed',
 		'data_location',
 		'premade_location',
+		'binary',
 		'download_dir',
 		'use_curl',
 	]
@@ -446,6 +447,7 @@ def main(argv0, args):
 	config.compression = args.compression or ('gz' if config.load_compressed else 'xz')
 	config.data_location = args.data_location
 	config.premade_location = args.premade_location
+	config.binary = args.binary
 	config.download_dir = args.download_dir
 	config.use_curl = args.use_curl
 
@@ -489,6 +491,7 @@ parser.set_defaults(load_compressed=True)
 parser.add_argument('--data-location', help='http- or rsync location of the data files',
 	default='https://s3.eu-central-1.amazonaws.com/atraf/atraf-data'
 )
+parser.add_argument('--binary', help='use COPY BINARY INTO', action='store_true')
 parser.add_argument('--premade-location', help='http- or rsync location of premade database tar files',
 	default='https://s3.eu-central-1.amazonaws.com/atraf-premade/linux-amd64/Aug2018-SP2'
 )
